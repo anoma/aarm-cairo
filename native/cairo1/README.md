@@ -14,3 +14,31 @@ defmodule Cairo.Cairo1 do
   def cairo1_vm_runner(_arg1, _arg2), do: :erlang.nif_error(:nif_not_loaded)
 end
 ```
+
+## TO compile Cairo1 code
+
+### Compile cairo1 code to sierra
+
+Use [cairo-compile](https://github.com/starkware-libs/cairo) to compile cairo code to sierra(pls use v2.5.4)
+
+```bash
+cargo run --bin cairo-compile -- --single-file /path/to/input.cairo /path/to/output.sierra --replace-ids
+```
+
+Note: It will be replaced by Juvix code and Juvix-lang compiler
+
+### Run cairo1-vm and generate the proof
+An example can be found in "cairo1_api_test"
+
+```
+# Run cairo1-vm
+{trace, memory} =
+      Cairo.Cairo1.cairo1_vm_runner(
+        sierra_program,
+        pub_inputs
+      )
+
+# Prove and verify
+{proof, public_input} = Cairo.Cairo0.cairo_prove(trace, memory)
+Cairo.Cairo0.cairo_verify(proof, public_input)
+```
