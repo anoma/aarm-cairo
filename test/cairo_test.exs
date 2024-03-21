@@ -10,7 +10,7 @@ defmodule NifTest do
   test "cairo0_api_test" do
     {:ok, program} = File.read("./native/cairo/fibonacci_5.json")
     {proof, public_input} = Cairo0.cairo0_run_and_prove(program)
-    assert true = Cairo0.cairo_verify(proof, public_input)
+    assert true = Cairo.verify(proof, public_input)
   end
 
   test "cairo1_api_test" do
@@ -21,7 +21,7 @@ defmodule NifTest do
       )
 
     # Prove and verify
-    {proof, public_input} = Cairo0.cairo_prove(trace, memory)
-    assert true = Cairo0.cairo_verify(proof, public_input)
+    {proof, public_input} = Cairo.prove(trace, memory)
+    assert true = Cairo.verify(proof, public_input)
   end
 end
