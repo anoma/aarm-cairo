@@ -9,9 +9,14 @@ defmodule Cairo.Cairo0 do
 
   # When loading a NIF module, dummy clauses for all NIF function are required.
   # NIF dummies usually just error out when called when the NIF is not loaded, as that should never normally happen.
-  def cairo0_run_and_prove(_arg1), do: :erlang.nif_error(:nif_not_loaded)
-  def cairo_prove(_arg1, _arg2), do: :erlang.nif_error(:nif_not_loaded)
-  def cairo_verify(_arg1, _arg2), do: :erlang.nif_error(:nif_not_loaded)
+  @spec cairo0_run_and_prove(binary()) :: {list(byte()), list(byte())}
+  @spec cairo_prove(list(byte()), list(byte())) ::
+          {list(byte()), list(byte())}
+  @spec cairo_verify(list(byte()), list(byte())) :: boolean()
+
+  def cairo0_run_and_prove(_program), do: :erlang.nif_error(:nif_not_loaded)
+  def cairo_prove(_trace, _memory), do: :erlang.nif_error(:nif_not_loaded)
+  def cairo_verify(_proof, _pub_input), do: :erlang.nif_error(:nif_not_loaded)
 end
 
 defmodule Cairo.Cairo1 do
@@ -25,5 +30,7 @@ defmodule Cairo.Cairo1 do
 
   # When loading a NIF module, dummy clauses for all NIF function are required.
   # NIF dummies usually just error out when called when the NIF is not loaded, as that should never normally happen.
-  def cairo1_vm_runner(_arg1, _arg2), do: :erlang.nif_error(:nif_not_loaded)
+  @spec cairo1_vm_runner(binary(), binary()) :: {list(byte()), list(byte())}
+
+  def cairo1_vm_runner(_path, _inputs), do: :erlang.nif_error(:nif_not_loaded)
 end
