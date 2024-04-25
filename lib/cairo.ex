@@ -16,6 +16,12 @@ defmodule Cairo do
     :world
   end
 
+  @spec cairo_vm_runner(list(byte()), list(byte())) ::
+          {list(byte()), list(byte())}
+  defdelegate cairo_vm_runner(program_content, program_input),
+    to: Cairo.CairoVM,
+    as: :cairo_vm_runner
+
   @spec prove(list(byte()), list(byte())) :: {list(byte()), list(byte())}
   defdelegate prove(trace, memory), to: Cairo.CairoProver, as: :cairo_prove
 

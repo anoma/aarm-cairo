@@ -2,16 +2,14 @@ defmodule NifTest do
   use ExUnit.Case
 
   doctest Cairo.CairoProver
-  doctest Cairo.Cairo1
+  doctest Cairo.CairoVM
 
-  alias Cairo.Cairo1
-
-  test "cairo1_api_test" do
-    {:ok, program} = File.read("./native/cairo1/cairo.json")
-    {:ok, input} = File.read("./native/cairo1/cairo_input.json")
+  test "cairo_api_test" do
+    {:ok, program} = File.read("./native/cairo_vm/cairo.json")
+    {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
 
     {output, trace, memory} =
-      Cairo1.cairo_vm_runner(
+      Cairo.cairo_vm_runner(
         program,
         input
       )

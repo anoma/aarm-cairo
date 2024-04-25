@@ -17,13 +17,13 @@ defmodule Cairo.CairoProver do
   def cairo_verify(_proof, _pub_input), do: :erlang.nif_error(:nif_not_loaded)
 end
 
-defmodule Cairo.Cairo1 do
+defmodule Cairo.CairoVM do
   use Rustler,
     otp_app: :cairo,
-    crate: :cairo1
+    crate: :cairo_vm
 
   @moduledoc """
-  Documentation for `Cairo1`.
+  Documentation for `CairoVM`.
   """
 
   # When loading a NIF module, dummy clauses for all NIF function are required.

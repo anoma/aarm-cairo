@@ -1,4 +1,4 @@
-# NIF for Elixir.Anoma.Cairo1
+# NIF for Elixir.Anoma.CairoVM
 
 ## To build the NIF module:
 
@@ -7,17 +7,17 @@
 ## To load the NIF:
 
 ```elixir
-defmodule Cairo.Cairo1 do
-  use Rustler, otp_app: :cairo, crate: "cairo1"
+defmodule Cairo.CairoVM do
+  use Rustler, otp_app: :cairo, crate: "cairo_vm"
 
   # When your NIF is loaded, it will override this function.
   def cairo_vm_runner(_arg1, _arg2), do: :erlang.nif_error(:nif_not_loaded)
 end
 ```
 
-## TO compile Cairo1 code
+## TO compile CairoVM code
 
-### Compile cairo1 code to sierra
+### Compile cairo_vm code to sierra
 
 Use [cairo-compile](https://github.com/starkware-libs/cairo) to compile cairo code to sierra(pls use v2.5.4)
 
@@ -27,13 +27,13 @@ cargo run --bin cairo-compile -- --single-file /path/to/input.cairo /path/to/out
 
 Note: It will be replaced by Juvix code and Juvix-lang compiler
 
-### Run cairo1-vm and generate the proof
-An example can be found in "cairo1_api_test"
+### Run cairo_vm-vm and generate the proof
+An example can be found in "cairo_api_test"
 
 ```
-# Run cairo1-vm
+# Run cairo-vm
 {trace, memory} =
-      Cairo.Cairo1.cairo_vm_runner(
+      Cairo.CairoVM.cairo_vm_runner(
         sierra_program,
         pub_inputs
       )

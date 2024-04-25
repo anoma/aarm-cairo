@@ -14,4 +14,4 @@ fn cairo_vm_runner(program_content: String, inputs: String) -> (String, Vec<u8>,
     anoma_cairo_vm_runner(&program_content.as_bytes(), program_input).unwrap()
 }
 
-rustler::init!("Elixir.Cairo.Cairo1", [cairo_vm_runner]);
+rustler::init!("Elixir.Cairo.CairoVM", [cairo_vm_runner]);
