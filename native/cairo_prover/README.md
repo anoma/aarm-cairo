@@ -16,7 +16,7 @@ defmodule Cairo do
 end
 ```
 
-## TO compile Cairo0 code
+## TO compile CairoProver code
 
 ### Install [cairo-long](https://github.com/starkware-libs/cairo-lang):
 

@@ -1,8 +1,8 @@
 use cairo_platinum_prover::{
     air::{generate_cairo_proof, verify_cairo_proof, PublicInputs},
     cairo_mem::CairoMemory,
-    register_states::RegisterStates,
     execution_trace::build_main_trace,
+    register_states::RegisterStates,
 };
 use stark_platinum_prover::proof::options::{ProofOptions, SecurityLevel};
 
@@ -42,4 +42,4 @@ fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> bool {
     verify_cairo_proof(&proof, &pub_inputs, &proof_options)
 }
 
-rustler::init!("Elixir.Cairo.Cairo0", [cairo_prove, cairo_verify]);
+rustler::init!("Elixir.Cairo.CairoProver", [cairo_prove, cairo_verify]);

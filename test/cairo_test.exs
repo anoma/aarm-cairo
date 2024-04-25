@@ -1,7 +1,7 @@
 defmodule NifTest do
   use ExUnit.Case
 
-  doctest Cairo.Cairo0
+  doctest Cairo.CairoProver
   doctest Cairo.Cairo1
 
   alias Cairo.Cairo1

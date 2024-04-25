@@ -39,6 +39,6 @@ An example can be found in "cairo1_api_test"
       )
 
 # Prove and verify
-{proof, public_input} = Cairo.Cairo0.cairo_prove(trace, memory)
-Cairo.Cairo0.cairo_verify(proof, public_input)
+{proof, public_input} = Cairo.CairoProver.cairo_prove(trace, memory)
+Cairo.CairoProver.cairo_verify(proof, public_input)
 ```

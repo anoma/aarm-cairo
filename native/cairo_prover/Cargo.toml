@@ -1,11 +1,11 @@
 [package]
-name = "cairo"
+name = "cairo_prover"
 version = "0.1.0"
 authors = []
 edition = "2021"
 
 [lib]
-name = "cairo"
+name = "cairo_prover"
 path = "src/lib.rs"
 crate-type = ["cdylib"]
 

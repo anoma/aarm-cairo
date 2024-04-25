@@ -1,10 +1,10 @@
-defmodule Cairo.Cairo0 do
+defmodule Cairo.CairoProver do
   use Rustler,
     otp_app: :cairo,
-    crate: :cairo
+    crate: :cairo_prover
 
   @moduledoc """
-  Documentation for `Cairo`.
+  Documentation for `CairoProver`.
   """
 
   # When loading a NIF module, dummy clauses for all NIF function are required.
