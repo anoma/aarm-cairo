@@ -1,0 +1,5 @@
+module cairo;
+
+import Stdlib.Prelude open;
+
+main (x y : Field) : Field := x + y;

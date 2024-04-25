@@ -11,7 +11,7 @@ defmodule Cairo.Cairo1 do
   use Rustler, otp_app: :cairo, crate: "cairo1"
 
   # When your NIF is loaded, it will override this function.
-  def cairo1_vm_runner(_arg1, _arg2), do: :erlang.nif_error(:nif_not_loaded)
+  def cairo_vm_runner(_arg1, _arg2), do: :erlang.nif_error(:nif_not_loaded)
 end
 ```
 
@@ -33,7 +33,7 @@ An example can be found in "cairo1_api_test"
 ```
 # Run cairo1-vm
 {trace, memory} =
-      Cairo.Cairo1.cairo1_vm_runner(
+      Cairo.Cairo1.cairo_vm_runner(
         sierra_program,
         pub_inputs
       )

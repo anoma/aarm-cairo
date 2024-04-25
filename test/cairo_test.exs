@@ -14,11 +14,16 @@ defmodule NifTest do
   end
 
   test "cairo1_api_test" do
-    {trace, memory} =
-      Cairo1.cairo1_vm_runner(
-        "./native/cairo1/sierra_program",
-        "2 [1 2 3 4] 0 [9 8]"
+    {:ok, program} = File.read("./native/cairo1/cairo.json")
+    {:ok, input} = File.read("./native/cairo1/cairo_input.json")
+
+    {output, trace, memory} =
+      Cairo1.cairo_vm_runner(
+        program,
+        input
       )
+
+    assert "17\n" = output
 
     # Prove and verify
     {proof, public_input} = Cairo.prove(trace, memory)
