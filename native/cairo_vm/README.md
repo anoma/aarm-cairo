@@ -17,28 +17,37 @@ end
 
 ## TO compile CairoVM code
 
-### Compile cairo_vm code to sierra
+### Compile juvix code
 
-Use [cairo-compile](https://github.com/starkware-libs/cairo) to compile cairo code to sierra(pls use v2.5.4)
+Use the latest [Juvix compiler](https://github.com/anoma/juvix) to compile juvix program, and get compiled json file
 
 ```bash
-cargo run --bin cairo-compile -- --single-file /path/to/input.cairo /path/to/output.sierra --replace-ids
+juvix compile cairo cairo.juvix
 ```
 
-Note: It will be replaced by Juvix code and Juvix-lang compiler
-
-### Run cairo_vm-vm and generate the proof
+### Run cairo_vm and generate the proof
 An example can be found in "cairo_api_test"
 
-```
+```elixir
 # Run cairo-vm
-{trace, memory} =
-      Cairo.CairoVM.cairo_vm_runner(
-        sierra_program,
-        pub_inputs
-      )
+test "cairo_api_test" do
+  // The file cairo.json is the output of Juvix compiler
+  {:ok, program} = File.read("./native/cairo_vm/cairo.json")
 
-# Prove and verify
-{proof, public_input} = Cairo.CairoProver.cairo_prove(trace, memory)
-Cairo.CairoProver.cairo_verify(proof, public_input)
+  // The file cairo_input.json is what we use to input data into the program. If there's no input, it'll just be an empty string.
+  {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
+
+  // Run cairo vm
+  {output, trace, memory} =
+    Cairo.cairo_vm_runner(
+      program,
+      input
+    )
+
+  assert "17\n" = output
+
+  # Prove and verify
+  {proof, public_input} = Cairo.prove(trace, memory)
+  assert true = Cairo.verify(proof, public_input)
+end
 ```
