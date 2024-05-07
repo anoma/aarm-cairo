@@ -33,7 +33,8 @@ type ComplianceResult :=
 main (input output : Resource, merkle_path: [(Field, bool); 32], rcv: Field,) : ComplianceResult := 
   -- Check the input resource commitment:
   --    input_npk = poseidonHash2(input.npk, 0), the npk in input resource is actually the nk
-  --    input_psi = poseidonHashList(PRF_EXPAND_PERSONALIZATION_TO_FIELD, 0, input.rseed, input.nonce), PRF_EXPAND_PERSONALIZATION_TO_FIELD is a constant
+  --    PRF_EXPAND_PERSONALIZATION_TO_FIELD is a constant field element, which can be derived out of circuit by poseidonHash("Anoma_ExpandSeed")
+  --    input_psi = poseidonHashList(PRF_EXPAND_PERSONALIZATION_TO_FIELD, 0, input.rseed, input.nonce)
   --    input_rcm = poseidonHashList(PRF_EXPAND_PERSONALIZATION_TO_FIELD, 1, input.rseed, input.nonce)
   --    input_cm = poseidonHashList(input.logic, input.label, input.data, input_npk, input.nonce, input_psi, input.quantity, input.eph, input_rcm)
 
@@ -61,7 +62,8 @@ main (input output : Resource, merkle_path: [(Field, bool); 32], rcv: Field,) : 
   -- Compute the delta commitment
   --    input_kind = hash_to_curve(input.logic, input.label)
   --    output_kind = hash_to_curve(output.logic, output.label)
-  --    delta = input_kind * input.quantity - output_kind * output.quantity + blind_base * rcv, blind_base is a constant group element
+  --    delta = input_kind * input.quantity - output_kind * output.quantity + blind_base * rcv
+  --    blind_base is a constant group element, which can be found from binding signaure public parameters
   -- Note: we don't have the hash_to_curve yet.
 
   -- TODO: add resource logic commitments to support function privacy
