@@ -1,0 +1,69 @@
+module compliance;
+
+import Stdlib.Prelude open;
+
+type Resource :=
+  mkResource {
+    logic : Field;
+    label : Field;
+    quantity : Field;
+    data : Field;
+    eph : Field;
+    nonce : Field;
+    npk : Field;
+    rseed : Field
+  };
+
+type ComplianceResult :=
+  mkResult {
+    -- The nullifier of input resource
+    input_nullifier : Field;
+    -- The commitment to the output resource
+    output_cm : Field;
+    -- The root of the resource commitment Merkle tree
+    root : Field;
+    -- Resource delta is used to reason about total quantities of different kinds of resources
+    delta : Field;
+    -- TODO: add resource logic commitments
+    -- input_logic_commitment: 
+    -- output_logic_commitment: 
+  };
+
+
+main (input output : Resource, merkle_path: [(Field, bool); 32], rcv: Field,) : ComplianceResult := 
+  -- Check the input resource commitment:
+  --    input_npk = poseidonHash2(input.npk, 0), the npk in input resource is actually the nk
+  --    input_psi = poseidonHashList(PRF_EXPAND_PERSONALIZATION_TO_FIELD, 0, input.rseed, input.nonce), PRF_EXPAND_PERSONALIZATION_TO_FIELD is a constant
+  --    input_rcm = poseidonHashList(PRF_EXPAND_PERSONALIZATION_TO_FIELD, 1, input.rseed, input.nonce)
+  --    input_cm = poseidonHashList(input.logic, input.label, input.data, input_npk, input.nonce, input_psi, input.quantity, input.eph, input_rcm)
+
+
+  -- Generate the nullifier of input resource
+  --    input_nullifier = poseidonHashList(input.npk, input.nonce, input_psi, input_cm)
+
+
+  -- Check the output resource commitment
+  --    psi = poseidonHashList(PRF_EXPAND_PERSONALIZATION_TO_FIELD, 0, output.rseed, output.nonce)
+  --    output_rcm = poseidonHashList(PRF_EXPAND_PERSONALIZATION_TO_FIELD, 1, output.rseed, output.nonce)
+  --    output_cm =  poseidonHashList(output.logic, output.label, output.data, output.npk, input_cm, output_psi, output.quantity, output.eph, output_rcm)
+  -- Note: the input_cm is actually the nonce of output resource
+
+
+  -- Check the merkle tree path validity and return the root
+  -- let mut cur = input_cm;
+  -- for (node, is_left) in merkle_path.iter() {
+  --    let mut pair = (cur, node);
+  --    if is_left swap(pair);
+  --    cur = poseidonHash2(pair);
+  --  }
+  --  return cur;
+
+  -- Compute the delta commitment
+  --    input_kind = hash_to_curve(input.logic, input.label)
+  --    output_kind = hash_to_curve(output.logic, output.label)
+  --    delta = input_kind * input.quantity - output_kind * output.quantity + blind_base * rcv, blind_base is a constant group element
+  -- Note: we don't have the hash_to_curve yet.
+
+  -- TODO: add resource logic commitments to support function privacy
+
+  -- Return input_nullifier, output_cm, root, and delta
