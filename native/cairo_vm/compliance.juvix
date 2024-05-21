@@ -1,6 +1,7 @@
 module compliance;
 
 import Stdlib.Prelude open;
+import Stdlib.Cairo.Ec as Ec;
 
 type Resource :=
   mkResource {
@@ -60,12 +61,18 @@ main (input output : Resource, merkle_path: [(Field, bool); 32], rcv: Field,) : 
   --  return cur;
 
   -- Compute the delta commitment
-  --    input_kind = hash_to_curve(input.logic, input.label)
-  --    output_kind = hash_to_curve(output.logic, output.label)
+  --    input_kind = pedersen_hash_to_curve(input.logic, input.label)
+  --    output_kind = pedersen_hash_to_curve(output.logic, output.label)
   --    delta = input_kind * input.quantity - output_kind * output.quantity + blind_base * rcv
   --    blind_base is a constant group element, which can be found from binding signaure public parameters
-  -- Note: we don't have the hash_to_curve yet.
 
   -- TODO: add resource logic commitments to support function privacy
 
   -- Return input_nullifier, output_cm, root, and delta
+
+
+  -- Pedersen hash function can be found: https://docs.starkware.co/starkex/crypto/pedersen-hash-function.html
+  pedersen_hash_to_curve : (x y: Field) : Ec.Point :=
+  -- Init the five constant points P0, P1, P2, P3, P4
+  -- Split x and y to (x_low, x_high) and (y_low, y_high)
+  -- H(x, y) = P0 + x_low * P1 + x_high * P2 + y_low * P3 + y_high * P4
