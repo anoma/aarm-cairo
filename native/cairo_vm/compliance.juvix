@@ -1,7 +1,12 @@
-module compliance;
+module compliance_circuit;
 
 import Stdlib.Prelude open;
 import Stdlib.Cairo.Ec as Ec;
+import Stdlib.Cairo.Poseidon open;
+import Stdlib.Cairo.Pedersen open;
+
+-- type Quantity := Field;
+-- quantityCheck := ...;
 
 type Resource :=
   mkResource {
@@ -9,7 +14,7 @@ type Resource :=
     label : Field;
     quantity : Field;
     data : Field;
-    eph : Field;
+    eph : Bool;
     nonce : Field;
     npk : Field;
     rseed : Field
@@ -24,55 +29,81 @@ type ComplianceResult :=
     -- The root of the resource commitment Merkle tree
     root : Field;
     -- Resource delta is used to reason about total quantities of different kinds of resources
-    delta : Field;
-    -- TODO: add resource logic commitments
+    delta : Ec.Point;
+    -- TODO: add resource logic commitments (for functional privacy)
     -- input_logic_commitment: 
     -- output_logic_commitment: 
   };
 
+  bool (x : Field) : Bool :=
+    x * (x - 1) == 0;
 
-main (input output : Resource, merkle_path: [(Field, bool); 32], rcv: Field,) : ComplianceResult := 
+  check_merkle (current_root : Field) : Field × Bool -> Field
+    | (node, is_left) := 
+    let pair :=
+    if 
+      | is_left := (node, current_root)
+      | else := (current_root, node)
+    
+    in
+    case pair of (lhs , rhs) := poseidonHash2 lhs rhs;
+
+  
+  --- Check the merkle tree path validity and return the root
+  check_merkle_path (cur : Field) : (List (Field × Bool)) -> Field
+   | [] := cur
+   | (p :: ps) := check_merkle_path (check_merkle cur p) ps;  
+
+
+main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field) (eph_root : Field): ComplianceResult := 
+
   -- Check the input resource commitment:
-  --    input_npk = poseidonHash2(input.npk, 0), the npk in input resource is actually the nk
-  --    PRF_EXPAND_PERSONALIZATION_TO_FIELD is a constant field element, which can be derived out of circuit by poseidonHash("Anoma_ExpandSeed")
-  --    input_psi = poseidonHashList(PRF_EXPAND_PERSONALIZATION_TO_FIELD, 0, input.rseed, input.nonce)
-  --    input_rcm = poseidonHashList(PRF_EXPAND_PERSONALIZATION_TO_FIELD, 1, input.rseed, input.nonce)
-  --    input_cm = poseidonHashList(input.logic, input.label, input.data, input_npk, input.nonce, input_psi, input.quantity, input.eph, input_rcm)
-
+  let 
+  input_npk : Field := poseidonHash2 (Resource.npk input) 0; 
+  PRF_EXPAND_PERSONALIZATION_TO_FIELD : Field := poseidonHash1 12345;
+  input_psi := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 0; Resource.rseed input; Resource.nonce input];
+  input_rcm := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 1; Resource.rseed input; Resource.nonce input];
+  
+  eph_field : Field :=
+  if
+    | (Resource.eph input) := 1
+    | else := 0
+  ;
+  input_cm := poseidonHashList [Resource.logic input; Resource.label input; Resource.data input; Resource.npk input; Resource.nonce input; input_psi; Resource.quantity input; eph_field; input_rcm];
 
   -- Generate the nullifier of input resource
-  --    input_nullifier = poseidonHashList(input.npk, input.nonce, input_psi, input_cm)
+  input_nullifier_ := poseidonHashList [(Resource.npk input);  (Resource.nonce input);  input_psi;  input_cm];
 
 
   -- Check the output resource commitment
-  --    psi = poseidonHashList(PRF_EXPAND_PERSONALIZATION_TO_FIELD, 0, output.rseed, output.nonce)
-  --    output_rcm = poseidonHashList(PRF_EXPAND_PERSONALIZATION_TO_FIELD, 1, output.rseed, output.nonce)
-  --    output_cm =  poseidonHashList(output.logic, output.label, output.data, output.npk, input_cm, output_psi, output.quantity, output.eph, output_rcm)
-  -- Note: the input_cm is actually the nonce of output resource
-
-
-  -- Check the merkle tree path validity and return the root
-  -- let mut cur = input_cm;
-  -- for (node, is_left) in merkle_path.iter() {
-  --    let mut pair = (cur, node);
-  --    if is_left swap(pair);
-  --    cur = poseidonHash2(pair);
-  --  }
-  --  return cur;
+  output_psi := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 0; Resource.rseed output; Resource.nonce output];
+  output_rcm := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 1; Resource.rseed output; Resource.nonce output];
+  output_cm_ := poseidonHashList [Resource.logic output; Resource.label output; Resource.data output; Resource.npk output; input_cm; output_psi; Resource.quantity output; eph_field; output_rcm];
+  
+  root_ :=
+  if
+    | (Resource.eph input) := eph_root
+    | else := check_merkle_path input_cm merkle_path
+  ;
 
   -- Compute the delta commitment
-  --    input_kind = pedersen_hash_to_curve(input.logic, input.label)
-  --    output_kind = pedersen_hash_to_curve(output.logic, output.label)
-  --    delta = input_kind * input.quantity - output_kind * output.quantity + blind_base * rcv
-  --    blind_base is a constant group element, which can be found from binding signaure public parameters
+  blind_base := pedersenHashToCurve 12345 67890;
+  input_kind := pedersenHashToCurve (Resource.logic input) (Resource.label input);
+  output_kind := pedersenHashToCurve (Resource.logic output) (Resource.label output);
+  delta_ := Ec.add (Ec.sub (Ec.mul (Resource.quantity input) input_kind)  (Ec.mul (Resource.quantity output) output_kind))  (Ec.mul rcv blind_base);
+  
+  in 
 
-  -- TODO: add resource logic commitments to support function privacy
-
-  -- Return input_nullifier, output_cm, root, and delta
-
-
-  -- Pedersen hash function can be found: https://docs.starkware.co/starkex/crypto/pedersen-hash-function.html
-  pedersen_hash_to_curve : (x y: Field) : Ec.Point :=
-  -- Init the five constant points P0, P1, P2, P3, P4
-  -- Split x and y to (x_low, x_high) and (y_low, y_high)
-  -- H(x, y) = P0 + x_low * P1 + x_high * P2 + y_low * P3 + y_high * P4
+mkResult@{
+    -- The nullifier of input resource
+    input_nullifier := input_nullifier_;
+    -- The commitment to the output resource
+    output_cm := output_cm_;
+    -- The root of the resource commitment Merkle tree
+    root := root_;
+    -- Resource delta is used to reason about total quantities of different kinds of resources
+    delta := delta_;
+    -- TODO: add resource logic commitments
+    -- input_logic_commitment: 
+    -- output_logic_commitment: 
+  };
