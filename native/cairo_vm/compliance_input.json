@@ -1,0 +1,10 @@
+{
+    logic : 1;
+    label : 2;
+    quantity : 3;
+    data : 5;
+    eph : 4;
+    nonce : 6;
+    npk : 7;
+    rseed : 8
+}

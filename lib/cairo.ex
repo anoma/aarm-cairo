@@ -16,8 +16,7 @@ defmodule Cairo do
     :world
   end
 
-  @spec cairo_vm_runner(list(byte()), list(byte())) ::
-          {list(byte()), list(byte())}
+  @spec cairo_vm_runner(binary(), binary()) :: {[byte()], [byte()]}
   defdelegate cairo_vm_runner(program_content, program_input),
     to: Cairo.CairoVM,
     as: :cairo_vm_runner

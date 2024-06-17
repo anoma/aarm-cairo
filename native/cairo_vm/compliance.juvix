@@ -1,4 +1,4 @@
-module compliance_circuit;
+module compliance;
 
 import Stdlib.Prelude open;
 import Stdlib.Cairo.Ec as Ec;
@@ -29,7 +29,8 @@ type ComplianceResult :=
     -- The root of the resource commitment Merkle tree
     root : Field;
     -- Resource delta is used to reason about total quantities of different kinds of resources
-    delta : Ec.Point;
+    delta_x : Field;
+    delta_y : Field;
     -- TODO: add resource logic commitments (for functional privacy)
     -- input_logic_commitment: 
     -- output_logic_commitment: 
@@ -90,8 +91,9 @@ main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field
   blind_base := pedersenHashToCurve 12345 67890;
   input_kind := pedersenHashToCurve (Resource.logic input) (Resource.label input);
   output_kind := pedersenHashToCurve (Resource.logic output) (Resource.label output);
-  delta_ := Ec.add (Ec.sub (Ec.mul (Resource.quantity input) input_kind)  (Ec.mul (Resource.quantity output) output_kind))  (Ec.mul rcv blind_base);
-  
+  delta := Ec.add (Ec.sub (Ec.mul (Resource.quantity input) input_kind)  (Ec.mul (Resource.quantity output) output_kind))  (Ec.mul rcv blind_base);
+  delta_x_ := Ec.Point.x delta;
+  delta_y_ := Ec.Point.y delta;
   in 
 
 mkResult@{
@@ -102,7 +104,8 @@ mkResult@{
     -- The root of the resource commitment Merkle tree
     root := root_;
     -- Resource delta is used to reason about total quantities of different kinds of resources
-    delta := delta_;
+    delta_x := delta_x_;
+    delta_y := delta_y_;
     -- TODO: add resource logic commitments
     -- input_logic_commitment: 
     -- output_logic_commitment: 
