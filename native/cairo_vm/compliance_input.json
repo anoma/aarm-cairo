@@ -1,10 +1,25 @@
 {
-    logic : 1;
-    label : 2;
-    quantity : 3;
-    data : 5;
-    eph : 4;
-    nonce : 6;
-    npk : 7;
-    rseed : 8
+    "input": {
+        "logic" : 1,
+        "label" : 2,
+        "quantity" : 3,
+        "data" : 4,
+        "eph" : 5,
+        "nonce" : 6,
+        "npk" : 7,
+        "rseed" : 8
+    },
+    "output": {
+        "logic" : 9,
+        "label" : 10,
+        "quantity" : 11,
+        "data" : 12,
+        "eph" : 13,
+        "nonce" : 14,
+        "npk" : 15,
+        "rseed" : 16
+    },
+    "merkle_path": [{"fst": 3, "snd": true}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 11, "snd": false}, {"fst": 12, "snd": false}, {"fst": 13, "snd": true}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 16, "snd": true}, {"fst": 3, "snd": false}, {"fst": 18, "snd": false}, {"fst": 3, "snd": false}, {"fst": 20, "snd": true}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 23, "snd": false}, {"fst": 20, "snd": true}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 23, "snd": false}, {"fst": 20, "snd": true}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 23, "snd": false}, {"fst": 20, "snd": true}],
+    "rcv": 0,
+    "eph_root": 0
 }
