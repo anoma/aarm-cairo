@@ -1,25 +1,25 @@
 {
     "input": {
-        "logic" : 1,
-        "label" : 2,
-        "quantity" : 3,
-        "data" : 4,
-        "eph" : 5,
-        "nonce" : 6,
-        "npk" : 7,
-        "rseed" : 8
+        "logic" : 41,
+        "label" : 12,
+        "quantity" : 13,
+        "data" : 14,
+        "eph" : 15,
+        "nonce" : 26,
+        "npk" : 37,
+        "rseed" : 48
     },
     "output": {
-        "logic" : 9,
-        "label" : 10,
-        "quantity" : 11,
-        "data" : 12,
-        "eph" : 13,
-        "nonce" : 14,
-        "npk" : 15,
+        "logic" : 59,
+        "label" : 6432,
+        "quantity" : 711,
+        "data" : 812,
+        "eph" : 93,
+        "nonce" : 104,
+        "npk" : 195,
         "rseed" : 16
     },
-    "merkle_path": [{"fst": 3, "snd": true}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 11, "snd": false}, {"fst": 12, "snd": false}, {"fst": 13, "snd": true}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 16, "snd": true}, {"fst": 3, "snd": false}, {"fst": 18, "snd": false}, {"fst": 3, "snd": false}, {"fst": 20, "snd": true}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 23, "snd": false}, {"fst": 20, "snd": true}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 23, "snd": false}, {"fst": 20, "snd": true}, {"fst": 3, "snd": false}, {"fst": 3, "snd": false}, {"fst": 23, "snd": false}, {"fst": 20, "snd": true}],
-    "rcv": 0,
-    "eph_root": 0
+    "merkle_path": [{"fst": 33, "snd": true}, {"fst": 83, "snd": false}, {"fst": 73, "snd": false}, {"fst": 23, "snd": false}, {"fst": 33, "snd": false}, {"fst": 43, "snd": false}, {"fst": 53, "snd": false}, {"fst": 3, "snd": false}, {"fst": 36, "snd": false}, {"fst": 37, "snd": false}, {"fst": 118, "snd": false}, {"fst": 129, "snd": false}, {"fst": 12, "snd": true}, {"fst": 33, "snd": false}, {"fst": 43, "snd": false}, {"fst": 156, "snd": true}, {"fst": 63, "snd": false}, {"fst": 128, "snd": false}, {"fst": 32, "snd": false}, {"fst": 230, "snd": true}, {"fst": 3, "snd": false}, {"fst": 33, "snd": false}, {"fst": 223, "snd": false}, {"fst": 2032, "snd": true}, {"fst": 32, "snd": false}, {"fst": 323, "snd": false}, {"fst": 3223, "snd": false}, {"fst": 203, "snd": true}, {"fst": 31, "snd": false}, {"fst": 32, "snd": false}, {"fst": 22, "snd": false}, {"fst": 23, "snd": true}],
+    "rcv": 3,
+    "eph_root": 4
 }

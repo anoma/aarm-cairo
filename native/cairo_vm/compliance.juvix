@@ -36,24 +36,24 @@ type ComplianceResult :=
     -- output_logic_commitment: 
   };
 
-  bool (x : Field) : Bool :=
-    x * (x - 1) == 0;
+bool (x : Field) : Bool :=
+  x * (x - 1) == 0;
 
-  check_merkle (current_root : Field) : Field × Bool -> Field
-    | (node, is_left) := 
-    let pair :=
-    if 
-      | is_left := (node, current_root)
-      | else := (current_root, node)
-    
-    in
-    case pair of (lhs , rhs) := poseidonHash2 lhs rhs;
-
+check_merkle (current_root : Field) : Field × Bool -> Field
+  | (node, is_left) := 
+  let pair :=
+  if 
+    | is_left := (node, current_root)
+    | else := (current_root, node)
   
-  --- Check the merkle tree path validity and return the root
-  check_merkle_path (cur : Field) : (List (Field × Bool)) -> Field
-   | [] := cur
-   | (p :: ps) := check_merkle_path (check_merkle cur p) ps;  
+  in
+  case pair of (lhs , rhs) := poseidonHash2 lhs rhs;
+
+
+--- Check the merkle tree path validity and return the root
+check_merkle_path (cur : Field) : (List (Field × Bool)) -> Field
+  | [] := cur
+  | (p :: ps) := check_merkle_path (check_merkle cur p) ps;  
 
 
 main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field) (eph_root : Field): ComplianceResult := 
@@ -91,7 +91,11 @@ main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field
   blind_base := pedersenHashToCurve 12345 67890;
   input_kind := pedersenHashToCurve (Resource.logic input) (Resource.label input);
   output_kind := pedersenHashToCurve (Resource.logic output) (Resource.label output);
-  delta := Ec.add (Ec.sub (Ec.mul (Resource.quantity input) input_kind)  (Ec.mul (Resource.quantity output) output_kind))  (Ec.mul rcv blind_base);
+  d1 := Ec.mul (Resource.quantity input) input_kind;
+  d2 := Ec.mul (Resource.quantity output) output_kind;
+  d3 := Ec.mul rcv blind_base;
+  delta := Ec.add (Ec.sub d1  d2) d3;
+
   delta_x_ := Ec.Point.x delta;
   delta_y_ := Ec.Point.y delta;
   in 
