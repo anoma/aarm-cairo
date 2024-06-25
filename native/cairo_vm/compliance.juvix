@@ -88,17 +88,16 @@ main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field
   ;
 
   -- Compute the delta commitment
-  blind_base := pedersenHashToCurve 12345 67890;
+  b1 : Field := poseidonHash1 345678;
+  b2 : Field := poseidonHash1 789012;
+  blind_base := pedersenHashToCurve b1 b2;
   input_kind := pedersenHashToCurve (Resource.logic input) (Resource.label input);
   output_kind := pedersenHashToCurve (Resource.logic output) (Resource.label output);
   d1 := Ec.mul (Resource.quantity input) input_kind;
   d2 := Ec.mul (Resource.quantity output) output_kind;
   d3 := Ec.mul rcv blind_base;
   delta := Ec.add (Ec.sub d1  d2) d3;
-
-  delta_x_ := Ec.Point.x delta;
-  delta_y_ := Ec.Point.y delta;
-  in 
+  in
 
 mkResult@{
     -- The nullifier of input resource
@@ -108,8 +107,8 @@ mkResult@{
     -- The root of the resource commitment Merkle tree
     root := root_;
     -- Resource delta is used to reason about total quantities of different kinds of resources
-    delta_x := delta_x_;
-    delta_y := delta_y_;
+    delta_x := Ec.Point.x delta;
+    delta_y := Ec.Point.y delta;
     -- TODO: add resource logic commitments
     -- input_logic_commitment: 
     -- output_logic_commitment: 
