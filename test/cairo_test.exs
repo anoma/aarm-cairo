@@ -8,7 +8,7 @@ defmodule NifTest do
     {:ok, program} = File.read("./native/cairo_vm/cairo.json")
     {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
 
-    {output, trace, memory} =
+    {output, trace, memory, vm_public_input} =
       Cairo.cairo_vm_runner(
         program,
         input
@@ -17,7 +17,7 @@ defmodule NifTest do
     assert "17\n" = output
 
     # Prove and verify
-    {proof, public_input} = Cairo.prove(trace, memory)
+    {proof, public_input} = Cairo.prove(trace, memory, vm_public_input)
     assert true = Cairo.verify(proof, public_input)
   end
 end

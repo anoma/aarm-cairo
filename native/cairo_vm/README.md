@@ -38,7 +38,7 @@ test "cairo_api_test" do
   {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
 
   // Run cairo vm
-  {output, trace, memory} =
+  {output, trace, memory, public_inputs} =
     Cairo.cairo_vm_runner(
       program,
       input
@@ -47,7 +47,7 @@ test "cairo_api_test" do
   assert "17\n" = output
 
   # Prove and verify
-  {proof, public_input} = Cairo.prove(trace, memory)
+  {proof, public_input} = Cairo.prove(trace, memory, public_inputs)
   assert true = Cairo.verify(proof, public_input)
 end
 ```
