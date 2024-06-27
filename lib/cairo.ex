@@ -32,4 +32,9 @@ defmodule Cairo do
   defdelegate verify(proof, pub_input),
     to: Cairo.CairoProver,
     as: :cairo_verify
+
+  @spec load_compliance_circuit() :: {:error, atom()} | {:ok, binary()}
+  def load_compliance_circuit do
+    File.read("./native/cairo_vm/compliance.json")
+  end
 end

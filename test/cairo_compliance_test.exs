@@ -5,10 +5,10 @@ defmodule CairoComplianceTest do
   doctest Cairo.CairoVM
 
   test "compliance_circuit" do
-    {:ok, program} = File.read("./native/cairo_vm/compliance.json")
+    {:ok, program} = Cairo.load_compliance_circuit()
     {:ok, input} = File.read("./native/cairo_vm/compliance_input.json")
 
-    {output, trace, memory, public_inputs} =
+    {_output, trace, memory, public_inputs} =
       Cairo.cairo_vm_runner(
         program,
         input
