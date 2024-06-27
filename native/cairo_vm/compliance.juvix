@@ -70,7 +70,7 @@ main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field
     | (Resource.eph input) := 1
     | else := 0
   ;
-  input_cm := poseidonHashList [Resource.logic input; Resource.label input; Resource.data input; Resource.npk input; Resource.nonce input; input_psi; Resource.quantity input; eph_field; input_rcm];
+  input_cm := poseidonHashList [Resource.logic input; Resource.label input; Resource.data input; input_npk; Resource.nonce input; input_psi; Resource.quantity input; eph_field; input_rcm];
 
   -- Generate the nullifier of input resource
   input_nullifier_ := poseidonHashList [(Resource.npk input);  (Resource.nonce input);  input_psi;  input_cm];
