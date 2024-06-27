@@ -1,4 +1,4 @@
-defmodule NifTest do
+defmodule CairoComplianceTest do
   use ExUnit.Case
 
   doctest Cairo.CairoProver
