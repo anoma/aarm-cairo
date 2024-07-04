@@ -37,4 +37,15 @@ defmodule Cairo do
   defdelegate get_compliance_output(pub_input),
     to: Cairo.CairoProver,
     as: :cairo_get_compliance_output
+
+  @spec sign(list(list(byte())), list(list(byte()))) :: list(byte())
+  defdelegate sign(private_key_segments, messages),
+    to: Cairo.CairoProver,
+    as: :cairo_binding_sig_sign
+
+  @spec sig_verify(list(list(byte())), list(list(byte())), list(byte())) ::
+          boolean()
+  defdelegate sig_verify(pub_key_segments, messages, signature),
+    to: Cairo.CairoProver,
+    as: :cairo_binding_sig_verify
 end
