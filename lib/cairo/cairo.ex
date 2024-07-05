@@ -17,6 +17,10 @@ defmodule Cairo.CairoProver do
     do: :erlang.nif_error(:nif_not_loaded)
 
   def cairo_verify(_proof, _pub_input), do: :erlang.nif_error(:nif_not_loaded)
+
+  def cairo_get_compliance_output(_public_input),
+    do: :erlang.nif_error(:nif_not_loaded)
+
 end
 
 defmodule Cairo.CairoVM do

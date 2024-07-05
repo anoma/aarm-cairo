@@ -32,4 +32,9 @@ defmodule Cairo do
   defdelegate verify(proof, pub_input),
     to: Cairo.CairoProver,
     as: :cairo_verify
+
+  @spec get_compliance_output(list(byte())) :: any()
+  defdelegate get_compliance_output(pub_input),
+    to: Cairo.CairoProver,
+    as: :cairo_get_compliance_output
 end
