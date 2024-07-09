@@ -106,7 +106,7 @@ fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> bool {
     verify_cairo_proof(&proof, &pub_inputs, &proof_options)
 }
 
-#[rustler::nif(schedule = "DirtyCpu")]
+#[rustler::nif()]
 fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>{
     let (pub_inputs, _) : (PublicInputs, usize) =
         bincode::serde::decode_from_slice(&public_input, bincode::config::standard()).unwrap();
@@ -132,7 +132,6 @@ fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>
             eprintln!("Error: Address {:?} not found in public memory", addr_field_element);
         }
     }
-    println!("{:?}", output_values.clone());
     Ok(output_values)
 }
 
