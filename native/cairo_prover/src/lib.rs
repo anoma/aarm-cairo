@@ -7,11 +7,11 @@ use cairo_platinum_prover::{
 };
 use hashbrown::HashMap;
 use lambdaworks_math::traits::ByteConversion;
-use rustler::NifResult;
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::Zero;
 use rand::{thread_rng, RngCore};
+use rustler::NifResult;
 use stark_platinum_prover::proof::options::{ProofOptions, SecurityLevel};
 use starknet_crypto::{poseidon_hash_many, sign, verify};
 use starknet_curve::curve_params::{EC_ORDER, GENERATOR};
@@ -118,8 +118,8 @@ fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> bool {
 }
 
 #[rustler::nif()]
-fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>{
-    let (pub_inputs, _) : (PublicInputs, usize) =
+fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
+    let (pub_inputs, _): (PublicInputs, usize) =
         bincode::serde::decode_from_slice(&public_input, bincode::config::standard()).unwrap();
     let output_segments = match pub_inputs.memory_segments.get(&SegmentName::Output) {
         Some(segment) => segment,
@@ -129,8 +129,8 @@ fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>
         }
     };
 
-    let begin_addr :u64 = output_segments.begin_addr.try_into().unwrap();
-    let stop_addr :u64 = output_segments.stop_ptr.try_into().unwrap();
+    let begin_addr: u64 = output_segments.begin_addr.try_into().unwrap();
+    let stop_addr: u64 = output_segments.stop_ptr.try_into().unwrap();
 
     let mut output_values = Vec::new();
     for addr in begin_addr..stop_addr {
@@ -140,7 +140,10 @@ fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>
         if let Some(value) = pub_inputs.public_memory.get(&addr_field_element) {
             output_values.push(value.clone().to_bytes_le().to_vec());
         } else {
-            eprintln!("Error: Address {:?} not found in public memory", addr_field_element);
+            eprintln!(
+                "Error: Address {:?} not found in public memory",
+                addr_field_element
+            );
         }
     }
     Ok(output_values)
@@ -235,6 +238,27 @@ fn cairo_binding_sig_verify(
     verify(&pub_key, &msg, &r, &s).unwrap()
 }
 
+// random_felt can help create private key in signature
+#[rustler::nif]
+fn cairo_random_felt() -> Vec<u8> {
+    let mut rng = thread_rng();
+    let mut felt: [u8; 32] = Default::default();
+    rng.fill_bytes(&mut felt);
+    let felt = Felt::from_bytes_be_slice(&felt);
+    felt.to_bytes_be().to_vec()
+}
+
+#[rustler::nif]
+fn cairo_get_binding_sig_public_key(priv_key: Vec<u8>) -> Vec<u8> {
+    let priv_key_felt = Felt::from_bytes_be_slice(&priv_key);
+    let generator = ProjectivePoint::from_affine(GENERATOR.x(), GENERATOR.y()).unwrap();
+    let pub_key = (&generator * priv_key_felt).to_affine().unwrap();
+    let mut ret = pub_key.x().to_bytes_be().to_vec();
+    let mut y = pub_key.y().to_bytes_be().to_vec();
+    ret.append(&mut y);
+    ret
+}
+
 fn message_digest(msg: Vec<Vec<u8>>) -> Felt {
     let felt_msg_vec: Vec<Felt> = msg
         .into_iter()
@@ -250,6 +274,8 @@ rustler::init!(
         cairo_verify,
         cairo_get_compliance_output,
         cairo_binding_sig_sign,
-        cairo_binding_sig_verify
+        cairo_binding_sig_verify,
+        cairo_random_felt,
+        cairo_get_binding_sig_public_key,
     ]
 );

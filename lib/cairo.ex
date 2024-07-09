@@ -48,4 +48,14 @@ defmodule Cairo do
   defdelegate sig_verify(pub_key_segments, messages, signature),
     to: Cairo.CairoProver,
     as: :cairo_binding_sig_verify
+
+  @spec random_felt() :: list(byte())
+  defdelegate random_felt(),
+    to: Cairo.CairoProver,
+    as: :cairo_random_felt
+
+  @spec get_public_key(list(byte())) :: list(byte())
+  defdelegate get_public_key(priv_key),
+    to: Cairo.CairoProver,
+    as: :cairo_get_binding_sig_public_key
 end
