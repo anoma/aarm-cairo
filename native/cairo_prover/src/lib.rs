@@ -7,6 +7,7 @@ use cairo_platinum_prover::{
 };
 use hashbrown::HashMap;
 use lambdaworks_math::traits::ByteConversion;
+use rustler::NifResult;
 use stark_platinum_prover::proof::options::{ProofOptions, SecurityLevel};
 
 #[rustler::nif(schedule = "DirtyCpu")]
@@ -105,4 +106,33 @@ fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> bool {
     verify_cairo_proof(&proof, &pub_inputs, &proof_options)
 }
 
-rustler::init!("Elixir.Cairo.CairoProver", [cairo_prove, cairo_verify]);
+#[rustler::nif()]
+fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>{
+    let (pub_inputs, _) : (PublicInputs, usize) =
+        bincode::serde::decode_from_slice(&public_input, bincode::config::standard()).unwrap();
+    let output_segments = match pub_inputs.memory_segments.get(&SegmentName::Output) {
+        Some(segment) => segment,
+        None => {
+            eprintln!("Error: 'Output' segment not found in memory_segments");
+            return Ok(vec![]);
+        }
+    };
+
+    let begin_addr :u64 = output_segments.begin_addr.try_into().unwrap();
+    let stop_addr :u64 = output_segments.stop_ptr.try_into().unwrap();
+
+    let mut output_values = Vec::new();
+    for addr in begin_addr..stop_addr {
+        // Convert addr to FieldElement (assuming this is the correct way to create a FieldElement from an address)
+        let addr_field_element = Felt252::from(addr);
+
+        if let Some(value) = pub_inputs.public_memory.get(&addr_field_element) {
+            output_values.push(value.clone().to_bytes_le().to_vec());
+        } else {
+            eprintln!("Error: Address {:?} not found in public memory", addr_field_element);
+        }
+    }
+    Ok(output_values)
+}
+
+rustler::init!("Elixir.Cairo.CairoProver", [cairo_prove, cairo_verify, cairo_get_compliance_output]);
