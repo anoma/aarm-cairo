@@ -122,7 +122,7 @@ fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>
     let stop_addr :u64 = output_segments.stop_ptr.try_into().unwrap();
 
     let mut output_values = Vec::new();
-    for addr in begin_addr..=stop_addr-1 {
+    for addr in begin_addr..stop_addr {
         // Convert addr to FieldElement (assuming this is the correct way to create a FieldElement from an address)
         let addr_field_element = Felt252::from(addr);
 
