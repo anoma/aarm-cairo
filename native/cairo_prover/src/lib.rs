@@ -14,7 +14,7 @@ use num_traits::Zero;
 use rand::{thread_rng, RngCore};
 use stark_platinum_prover::proof::options::{ProofOptions, SecurityLevel};
 use starknet_crypto::{poseidon_hash_many, sign, verify};
-use starknet_curve::curve_params::{ALPHA, BETA, EC_ORDER, GENERATOR};
+use starknet_curve::curve_params::{EC_ORDER, GENERATOR};
 use starknet_types_core::{
     curve::{AffinePoint, ProjectivePoint},
     felt::Felt,
@@ -199,19 +199,18 @@ fn cairo_binding_sig_verify(
     let pub_key = pub_key_segments
         .into_iter()
         .fold(ProjectivePoint::identity(), |acc, bytes| {
-            let key_segment_felt =
-                Felt::from_bytes_be(&bytes.try_into().expect("Slice with incorrect length"));
-            let key_segment_affine = AffinePoint::new(
-                key_segment_felt,
-                (key_segment_felt.square() * key_segment_felt + ALPHA * key_segment_felt + BETA)
-                    .sqrt()
-                    .unwrap(),
-            )
-            .unwrap();
-            let key_segment_projective =
-                ProjectivePoint::from_affine(key_segment_affine.x(), key_segment_affine.y())
-                    .unwrap();
-            acc.add(key_segment_projective)
+            let key_x = Felt::from_bytes_be(
+                &bytes[0..32]
+                    .try_into()
+                    .expect("Slice with incorrect length"),
+            );
+            let key_y = Felt::from_bytes_be(
+                &bytes[32..64]
+                    .try_into()
+                    .expect("Slice with incorrect length"),
+            );
+            let key_segment_affine = AffinePoint::new(key_x, key_y).unwrap();
+            acc.add(key_segment_affine)
         })
         .to_affine()
         .unwrap()
@@ -244,4 +243,13 @@ fn message_digest(msg: Vec<Vec<u8>>) -> Felt {
     poseidon_hash_many(&felt_msg_vec)
 }
 
-rustler::init!("Elixir.Cairo.CairoProver", [cairo_prove, cairo_verify, cairo_binding_sig_sign, cairo_binding_sig_verify, cairo_get_compliance_output]);
+rustler::init!(
+    "Elixir.Cairo.CairoProver",
+    [
+        cairo_prove,
+        cairo_verify,
+        cairo_get_compliance_output,
+        cairo_binding_sig_sign,
+        cairo_binding_sig_verify
+    ]
+);
