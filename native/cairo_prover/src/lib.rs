@@ -13,7 +13,7 @@ use num_traits::Zero;
 use rand::{thread_rng, RngCore};
 use rustler::NifResult;
 use stark_platinum_prover::proof::options::{ProofOptions, SecurityLevel};
-use starknet_crypto::{poseidon_hash_many, sign, verify};
+use starknet_crypto::{poseidon_hash, poseidon_hash_many, poseidon_hash_single, sign, verify};
 use starknet_curve::curve_params::{EC_ORDER, GENERATOR};
 use starknet_types_core::{
     curve::{AffinePoint, ProjectivePoint},
@@ -267,6 +267,47 @@ fn message_digest(msg: Vec<Vec<u8>>) -> Felt {
     poseidon_hash_many(&felt_msg_vec)
 }
 
+#[rustler::nif]
+fn poseidon_single(x: Vec<u8>) -> Vec<u8> {
+    let mut padded_x = x;
+    padded_x.resize(32, 0);
+    let x_bytes: [u8; 32] = padded_x
+        .as_slice()
+        .try_into()
+        .expect("Slice with incorrect length");
+    let x_field = Felt::from_bytes_be(&x_bytes);
+    poseidon_hash_single(x_field).to_bytes_be().to_vec()
+}
+
+#[rustler::nif]
+fn poseidon(x: Vec<u8>, y: Vec<u8>) -> Vec<u8> {
+    let x_bytes: [u8; 32] = x
+        .as_slice()
+        .try_into()
+        .expect("Slice with incorrect length");
+    let x_field = Felt::from_bytes_be(&x_bytes);
+    let y_bytes: [u8; 32] = y
+        .as_slice()
+        .try_into()
+        .expect("Slice with incorrect length");
+    let y_field = Felt::from_bytes_be(&y_bytes);
+    poseidon_hash(x_field, y_field).to_bytes_be().to_vec()
+}
+
+#[rustler::nif]
+fn poseidon_many(inputs: Vec<Vec<u8>>) -> Vec<u8> {
+    let mut vec_fe = Vec::new();
+    for i in inputs {
+        let i_bytes: [u8; 32] = i
+            .as_slice()
+            .try_into()
+            .expect("Slice with incorrect length");
+        vec_fe.push(Felt::from_bytes_be(&i_bytes))
+    }
+    let result_fe = poseidon_hash_many(&vec_fe);
+    result_fe.to_bytes_be().to_vec()
+}
+
 rustler::init!(
     "Elixir.Cairo.CairoProver",
     [
@@ -277,5 +318,8 @@ rustler::init!(
         cairo_binding_sig_verify,
         cairo_random_felt,
         cairo_get_binding_sig_public_key,
+        poseidon_single,
+        poseidon,
+        poseidon_many,
     ]
 );

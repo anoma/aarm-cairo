@@ -31,6 +31,15 @@ defmodule Cairo.CairoProver do
 
   def cairo_get_binding_sig_public_key(_priv_key),
     do: :erlang.nif_error(:nif_not_loaded)
+
+  def poseidon_single(_input),
+    do: :erlang.nif_error(:nif_not_loaded)
+
+  def poseidon(_x, _y),
+    do: :erlang.nif_error(:nif_not_loaded)
+
+  def poseidon_many(_inputs),
+    do: :erlang.nif_error(:nif_not_loaded)
 end
 
 defmodule Cairo.CairoVM do

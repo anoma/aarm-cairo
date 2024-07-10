@@ -1,6 +1,6 @@
 defmodule PoseidonTest do
   use ExUnit.Case
-  doctest Cairo.StarknetCrypto
+  doctest Cairo.CairoProver
 
   test "poseidon_single_hash_test" do
     x_string_unpadded =
@@ -8,7 +8,7 @@ defmodule PoseidonTest do
 
     x_string = String.pad_leading(x_string_unpadded, 64, "0")
     x_bytes = :binary.bin_to_list(Base.decode16!(x_string, case: :lower))
-    output = Cairo.StarknetCrypto.poseidon_single(x_bytes)
+    output = Cairo.poseidon_single(x_bytes)
 
     hash_string =
       "011222854783f17f1c580ff64671bc3868de034c236f956216e8ed4ab7533455"
@@ -34,7 +34,7 @@ defmodule PoseidonTest do
     hash_string = String.pad_leading(hash_string_unpadded, 64, "0")
     x_bytes = :binary.bin_to_list(Base.decode16!(x_string, case: :lower))
     y_bytes = :binary.bin_to_list(Base.decode16!(y_string, case: :lower))
-    output = Cairo.StarknetCrypto.poseidon(x_bytes, y_bytes)
+    output = Cairo.poseidon(x_bytes, y_bytes)
 
     hash_bytes =
       :binary.bin_to_list(Base.decode16!(hash_string, case: :lower))
@@ -67,7 +67,7 @@ defmodule PoseidonTest do
       :binary.bin_to_list(Base.decode16!(hash_string, case: :lower))
 
     output =
-      Cairo.StarknetCrypto.poseidon_many([i1_bytes, i2_bytes, i3_bytes])
+      Cairo.poseidon_many([i1_bytes, i2_bytes, i3_bytes])
 
     assert hash_bytes == output
   end

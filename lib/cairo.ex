@@ -58,4 +58,19 @@ defmodule Cairo do
   defdelegate get_public_key(priv_key),
     to: Cairo.CairoProver,
     as: :cairo_get_binding_sig_public_key
+
+  @spec poseidon_single(list(byte())) :: list(byte())
+  defdelegate poseidon_single(input),
+    to: Cairo.CairoProver,
+    as: :poseidon_single
+
+  @spec poseidon(list(byte()), list(byte())) :: list(byte())
+  defdelegate poseidon(x, y),
+    to: Cairo.CairoProver,
+    as: :poseidon
+
+  @spec poseidon_many(list(list(byte()))) :: list(byte())
+  defdelegate poseidon_many(inputs),
+    to: Cairo.CairoProver,
+    as: :poseidon_many
 end
