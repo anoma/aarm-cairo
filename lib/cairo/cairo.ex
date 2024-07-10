@@ -21,6 +21,16 @@ defmodule Cairo.CairoProver do
   def cairo_get_compliance_output(_public_input),
     do: :erlang.nif_error(:nif_not_loaded)
 
+  def cairo_binding_sig_sign(_private_key_segments, _messages),
+    do: :erlang.nif_error(:nif_not_loaded)
+
+  def cairo_binding_sig_verify(_pub_key_segments, _messages, _signature),
+    do: :erlang.nif_error(:nif_not_loaded)
+
+  def cairo_random_felt(), do: :erlang.nif_error(:nif_not_loaded)
+
+  def cairo_get_binding_sig_public_key(_priv_key),
+    do: :erlang.nif_error(:nif_not_loaded)
 end
 
 defmodule Cairo.CairoVM do

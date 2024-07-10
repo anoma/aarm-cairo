@@ -7,8 +7,19 @@ use cairo_platinum_prover::{
 };
 use hashbrown::HashMap;
 use lambdaworks_math::traits::ByteConversion;
+use num_bigint::BigInt;
+use num_integer::Integer;
+use num_traits::Zero;
+use rand::{thread_rng, RngCore};
 use rustler::NifResult;
 use stark_platinum_prover::proof::options::{ProofOptions, SecurityLevel};
+use starknet_crypto::{poseidon_hash_many, sign, verify};
+use starknet_curve::curve_params::{EC_ORDER, GENERATOR};
+use starknet_types_core::{
+    curve::{AffinePoint, ProjectivePoint},
+    felt::Felt,
+};
+use std::ops::Add;
 
 #[rustler::nif(schedule = "DirtyCpu")]
 fn cairo_prove(trace: Vec<u8>, memory: Vec<u8>, public_input: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
@@ -107,8 +118,8 @@ fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> bool {
 }
 
 #[rustler::nif()]
-fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>{
-    let (pub_inputs, _) : (PublicInputs, usize) =
+fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
+    let (pub_inputs, _): (PublicInputs, usize) =
         bincode::serde::decode_from_slice(&public_input, bincode::config::standard()).unwrap();
     let output_segments = match pub_inputs.memory_segments.get(&SegmentName::Output) {
         Some(segment) => segment,
@@ -118,8 +129,8 @@ fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>
         }
     };
 
-    let begin_addr :u64 = output_segments.begin_addr.try_into().unwrap();
-    let stop_addr :u64 = output_segments.stop_ptr.try_into().unwrap();
+    let begin_addr: u64 = output_segments.begin_addr.try_into().unwrap();
+    let stop_addr: u64 = output_segments.stop_ptr.try_into().unwrap();
 
     let mut output_values = Vec::new();
     for addr in begin_addr..stop_addr {
@@ -129,10 +140,142 @@ fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>
         if let Some(value) = pub_inputs.public_memory.get(&addr_field_element) {
             output_values.push(value.clone().to_bytes_le().to_vec());
         } else {
-            eprintln!("Error: Address {:?} not found in public memory", addr_field_element);
+            eprintln!(
+                "Error: Address {:?} not found in public memory",
+                addr_field_element
+            );
         }
     }
     Ok(output_values)
 }
 
-rustler::init!("Elixir.Cairo.CairoProver", [cairo_prove, cairo_verify, cairo_get_compliance_output]);
+// The private_key_segments are random values used in delta commitments.
+// The messages are nullifiers and resource commitments in the transaction.
+#[rustler::nif]
+fn cairo_binding_sig_sign(private_key_segments: Vec<Vec<u8>>, messages: Vec<Vec<u8>>) -> Vec<u8> {
+    // Compute private key
+    let private_key = {
+        let result = private_key_segments
+            .iter()
+            .fold(BigInt::zero(), |acc, key_segment| {
+                let key = BigInt::from_bytes_be(num_bigint::Sign::Plus, &key_segment);
+                acc.add(key)
+            })
+            .mod_floor(&EC_ORDER.to_bigint());
+
+        let (_, buffer) = result.to_bytes_be();
+        let mut result = [0u8; 32];
+        result[(32 - buffer.len())..].copy_from_slice(&buffer[..]);
+
+        Felt::from_bytes_be(&result)
+    };
+
+    // Message digest
+    let sig_hash = message_digest(messages);
+
+    // ECDSA sign
+    let mut rng = thread_rng();
+    let k = {
+        let mut felt: [u8; 32] = Default::default();
+        rng.fill_bytes(&mut felt);
+        Felt::from_bytes_be(&felt)
+    };
+    let signature = sign(&private_key, &sig_hash, &k).unwrap();
+
+    // Serialize signature
+    let mut ret = Vec::new();
+    ret.extend(signature.r.to_bytes_be());
+    ret.extend(signature.s.to_bytes_be());
+    // We don't need the v to recover pubkey
+    // ret.extend(signature.v.to_bytes_be());
+    ret
+}
+
+// The pub_key_segments are delta commitments in compliance input inputs.
+#[rustler::nif]
+fn cairo_binding_sig_verify(
+    pub_key_segments: Vec<Vec<u8>>,
+    messages: Vec<Vec<u8>>,
+    signature: Vec<u8>,
+) -> bool {
+    // Generate the public key
+    let pub_key = pub_key_segments
+        .into_iter()
+        .fold(ProjectivePoint::identity(), |acc, bytes| {
+            let key_x = Felt::from_bytes_be(
+                &bytes[0..32]
+                    .try_into()
+                    .expect("Slice with incorrect length"),
+            );
+            let key_y = Felt::from_bytes_be(
+                &bytes[32..64]
+                    .try_into()
+                    .expect("Slice with incorrect length"),
+            );
+            let key_segment_affine = AffinePoint::new(key_x, key_y).unwrap();
+            acc.add(key_segment_affine)
+        })
+        .to_affine()
+        .unwrap()
+        .x();
+
+    // Message digest
+    let msg = message_digest(messages);
+
+    // Decode the signature
+    let r = Felt::from_bytes_be(
+        &signature[0..32]
+            .try_into()
+            .expect("Slice with incorrect length"),
+    );
+    let s = Felt::from_bytes_be(
+        &signature[32..64]
+            .try_into()
+            .expect("Slice with incorrect length"),
+    );
+
+    // Verify the signature
+    verify(&pub_key, &msg, &r, &s).unwrap()
+}
+
+// random_felt can help create private key in signature
+#[rustler::nif]
+fn cairo_random_felt() -> Vec<u8> {
+    let mut rng = thread_rng();
+    let mut felt: [u8; 32] = Default::default();
+    rng.fill_bytes(&mut felt);
+    let felt = Felt::from_bytes_be_slice(&felt);
+    felt.to_bytes_be().to_vec()
+}
+
+#[rustler::nif]
+fn cairo_get_binding_sig_public_key(priv_key: Vec<u8>) -> Vec<u8> {
+    let priv_key_felt = Felt::from_bytes_be_slice(&priv_key);
+    let generator = ProjectivePoint::from_affine(GENERATOR.x(), GENERATOR.y()).unwrap();
+    let pub_key = (&generator * priv_key_felt).to_affine().unwrap();
+    let mut ret = pub_key.x().to_bytes_be().to_vec();
+    let mut y = pub_key.y().to_bytes_be().to_vec();
+    ret.append(&mut y);
+    ret
+}
+
+fn message_digest(msg: Vec<Vec<u8>>) -> Felt {
+    let felt_msg_vec: Vec<Felt> = msg
+        .into_iter()
+        .map(|bytes| Felt::from_bytes_be(&bytes.try_into().expect("Slice with incorrect length")))
+        .collect();
+    poseidon_hash_many(&felt_msg_vec)
+}
+
+rustler::init!(
+    "Elixir.Cairo.CairoProver",
+    [
+        cairo_prove,
+        cairo_verify,
+        cairo_get_compliance_output,
+        cairo_binding_sig_sign,
+        cairo_binding_sig_verify,
+        cairo_random_felt,
+        cairo_get_binding_sig_public_key,
+    ]
+);
