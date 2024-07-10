@@ -22,7 +22,7 @@ defmodule Cairo do
     to: Cairo.CairoVM,
     as: :cairo_vm_runner
 
-  @spec prove(list(byte()), list(byte()), binary()) ::
+  @spec prove(list(byte()), list(byte()), list(byte())) ::
           {list(byte()), list(byte())}
   defdelegate prove(trace, memory, public_input),
     to: Cairo.CairoProver,

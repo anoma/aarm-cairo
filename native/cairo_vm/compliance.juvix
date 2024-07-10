@@ -32,20 +32,20 @@ type ComplianceResult :=
     delta_x : Field;
     delta_y : Field;
     -- TODO: add resource logic commitments (for functional privacy)
-    -- input_logic_commitment: 
-    -- output_logic_commitment: 
+    -- input_logic_commitment:
+    -- output_logic_commitment:
   };
 
 bool (x : Field) : Bool :=
   x * (x - 1) == 0;
 
 check_merkle (current_root : Field) : Field × Bool -> Field
-  | (node, is_left) := 
+  | (node, is_left) :=
   let pair :=
-  if 
+  if
     | is_left := (node, current_root)
     | else := (current_root, node)
-  
+
   in
   case pair of (lhs , rhs) := poseidonHash2 lhs rhs;
 
@@ -53,18 +53,18 @@ check_merkle (current_root : Field) : Field × Bool -> Field
 --- Check the merkle tree path validity and return the root
 check_merkle_path (cur : Field) : (List (Field × Bool)) -> Field
   | [] := cur
-  | (p :: ps) := check_merkle_path (check_merkle cur p) ps;  
+  | (p :: ps) := check_merkle_path (check_merkle cur p) ps;
 
 
-main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field) (eph_root : Field): ComplianceResult := 
+main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field) (eph_root : Field): ComplianceResult :=
 
   -- Check the input resource commitment:
-  let 
-  input_npk : Field := poseidonHash2 (Resource.npk input) 0; 
+  let
+  input_npk : Field := poseidonHash2 (Resource.npk input) 0;
   PRF_EXPAND_PERSONALIZATION_TO_FIELD : Field := poseidonHash1 12345;
   input_psi := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 0; Resource.rseed input; Resource.nonce input];
   input_rcm := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 1; Resource.rseed input; Resource.nonce input];
-  
+
   eph_field : Field :=
   if
     | (Resource.eph input) := 1
@@ -80,7 +80,7 @@ main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field
   output_psi := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 0; Resource.rseed output; Resource.nonce output];
   output_rcm := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 1; Resource.rseed output; Resource.nonce output];
   output_cm_ := poseidonHashList [Resource.logic output; Resource.label output; Resource.data output; Resource.npk output; input_cm; output_psi; Resource.quantity output; eph_field; output_rcm];
-  
+
   root_ :=
   if
     | (Resource.eph input) := eph_root
@@ -110,6 +110,6 @@ mkResult@{
     delta_x := Ec.Point.x delta;
     delta_y := Ec.Point.y delta;
     -- TODO: add resource logic commitments
-    -- input_logic_commitment: 
-    -- output_logic_commitment: 
+    -- input_logic_commitment:
+    -- output_logic_commitment:
   };
