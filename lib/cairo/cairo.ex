@@ -40,6 +40,9 @@ defmodule Cairo.CairoProver do
 
   def poseidon_many(_inputs),
     do: :erlang.nif_error(:nif_not_loaded)
+
+  def program_hash(_public_inputs),
+    do: :erlang.nif_error(:nif_not_loaded)
 end
 
 defmodule Cairo.CairoVM do

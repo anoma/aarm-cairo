@@ -308,6 +308,44 @@ fn poseidon_many(inputs: Vec<Vec<u8>>) -> Vec<u8> {
     result_fe.to_bytes_be().to_vec()
 }
 
+// Get the program from public inputs and return the program hash as the
+// resource label
+#[rustler::nif]
+fn program_hash(public_inputs: Vec<u8>) -> Vec<u8> {
+    let (pub_inputs, _): (PublicInputs, usize) =
+        bincode::serde::decode_from_slice(&public_inputs, bincode::config::standard()).unwrap();
+    let program_segments = match pub_inputs.memory_segments.get(&SegmentName::Program) {
+        Some(segment) => segment,
+        None => {
+            eprintln!("Error: 'Program' segment not found in memory_segments");
+            return vec![];
+        }
+    };
+
+    let begin_addr: u64 = program_segments.begin_addr.try_into().unwrap();
+    let stop_addr: u64 = program_segments.stop_ptr.try_into().unwrap();
+
+    let mut program = Vec::new();
+    for addr in begin_addr..stop_addr {
+        // Convert addr to FieldElement (assuming this is the correct way to create a FieldElement from an address)
+        let addr_field_element = Felt252::from(addr);
+
+        if let Some(value) = pub_inputs.public_memory.get(&addr_field_element) {
+            program.push(Felt::from_raw(value.to_raw().limbs));
+        } else {
+            eprintln!(
+                "Error: Address {:?} not found in public memory",
+                addr_field_element
+            );
+            return vec![];
+        }
+    }
+
+    let program_hash = poseidon_hash_many(&program);
+
+    program_hash.to_bytes_be().to_vec()
+}
+
 rustler::init!(
     "Elixir.Cairo.CairoProver",
     [
@@ -321,5 +359,6 @@ rustler::init!(
         poseidon_single,
         poseidon,
         poseidon_many,
+        program_hash,
     ]
 );
