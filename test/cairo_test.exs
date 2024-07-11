@@ -19,5 +19,8 @@ defmodule NifTest do
     # Prove and verify
     {proof, public_input} = Cairo.prove(trace, memory, vm_public_input)
     assert true = Cairo.verify(proof, public_input)
+
+    # Get program hash
+    _program_hash = Cairo.get_program_hash(public_input)
   end
 end

@@ -73,4 +73,9 @@ defmodule Cairo do
   defdelegate poseidon_many(inputs),
     to: Cairo.CairoProver,
     as: :poseidon_many
+
+  @spec get_program_hash(list(byte())) :: list(byte())
+  defdelegate get_program_hash(pub_input),
+    to: Cairo.CairoProver,
+    as: :program_hash
 end
