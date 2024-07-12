@@ -34,6 +34,8 @@ type ComplianceResult :=
     -- TODO: add resource logic commitments (for functional privacy)
     -- input_logic_commitment: 
     -- output_logic_commitment: 
+    input_label : Field;
+    output_label : Field;
   };
 
 bool (x : Field) : Bool :=
@@ -112,4 +114,6 @@ mkResult@{
     -- TODO: add resource logic commitments
     -- input_logic_commitment: 
     -- output_logic_commitment: 
+    input_label := Resource.label input;
+    output_label := Resource.label output;
   };
