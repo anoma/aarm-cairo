@@ -138,7 +138,7 @@ fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>
         let addr_field_element = Felt252::from(addr);
 
         if let Some(value) = pub_inputs.public_memory.get(&addr_field_element) {
-            output_values.push(value.clone().to_bytes_le().to_vec());
+            output_values.push(value.clone().to_bytes_be().to_vec());
         } else {
             eprintln!(
                 "Error: Address {:?} not found in public memory",
