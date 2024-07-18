@@ -90,9 +90,7 @@ main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field
   ;
 
   -- Compute the delta commitment
-  b1 : Field := poseidonHash1 345678;
-  b2 : Field := poseidonHash1 789012;
-  blind_base := pedersenHashToCurve b1 b2;
+  blind_base := Ec.mkPoint Ec.StarkCurve.GEN_X Ec.StarkCurve.GEN_Y;
   input_kind := pedersenHashToCurve (Resource.logic input) (Resource.label input);
   output_kind := pedersenHashToCurve (Resource.logic output) (Resource.label output);
   d1 := Ec.mul (Resource.quantity input) input_kind;
