@@ -11,9 +11,9 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rustler = "0.31.0"
-cairo-platinum-prover = { git = "https://github.com/lambdaclass/lambdaworks", version = "0.7.0"}
-stark-platinum-prover = { git = "https://github.com/lambdaclass/lambdaworks", version = "0.7.0"}
-lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", version = "0.7.0"}
+cairo-platinum-prover = { git = "https://github.com/lambdaclass/lambdaworks", version = "0.8.0"}
+stark-platinum-prover = { git = "https://github.com/lambdaclass/lambdaworks", version = "0.8.0"}
+lambdaworks-math = { git = "https://github.com/lambdaclass/lambdaworks", version = "0.8.0"}
 bincode = "2.0.0-rc.3"
 serde_json = { version = "1.0", features = ["preserve_order"] }
 hashbrown = { version = "0.14.0", features = ["serde"] }
