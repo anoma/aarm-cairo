@@ -22,7 +22,7 @@ use starknet_types_core::{
 use std::ops::Add;
 
 #[rustler::nif(schedule = "DirtyCpu")]
-fn cairo_prove(trace: Vec<u8>, memory: Vec<u8>, public_input: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
+fn cairo_prove(trace: Vec<u8>, memory: Vec<u8>, public_input: Vec<u8>) -> NifResult<(Vec<u8>, Vec<u8>)> {
     // Generating the prover args
     let register_states = RegisterStates::from_bytes_le(&trace).unwrap();
     let memory = CairoMemory::from_bytes_le(&memory).unwrap();
@@ -101,11 +101,11 @@ fn cairo_prove(trace: Vec<u8>, memory: Vec<u8>, public_input: Vec<u8>) -> (Vec<u
     let pub_input_bytes =
         bincode::serde::encode_to_vec(&pub_inputs, bincode::config::standard()).unwrap();
 
-    (proof_bytes, pub_input_bytes)
+    Ok((proof_bytes, pub_input_bytes))
 }
 
 #[rustler::nif(schedule = "DirtyCpu")]
-fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> bool {
+fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> NifResult<bool> {
     let proof_options = ProofOptions::new_secure(SecurityLevel::Conjecturable100Bits, 3);
 
     let (proof, _) =
@@ -114,7 +114,7 @@ fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> bool {
     let (pub_inputs, _) =
         bincode::serde::decode_from_slice(&public_input, bincode::config::standard()).unwrap();
 
-    verify_cairo_proof(&proof, &pub_inputs, &proof_options)
+    Ok(verify_cairo_proof(&proof, &pub_inputs, &proof_options))
 }
 
 #[rustler::nif()]
@@ -152,7 +152,7 @@ fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>
 // The private_key_segments are random values used in delta commitments.
 // The messages are nullifiers and resource commitments in the transaction.
 #[rustler::nif]
-fn cairo_binding_sig_sign(private_key_segments: Vec<Vec<u8>>, messages: Vec<Vec<u8>>) -> Vec<u8> {
+fn cairo_binding_sig_sign(private_key_segments: Vec<Vec<u8>>, messages: Vec<Vec<u8>>) -> NifResult<Vec<u8>> {
     // Compute private key
     let private_key = {
         let result = private_key_segments
@@ -171,7 +171,7 @@ fn cairo_binding_sig_sign(private_key_segments: Vec<Vec<u8>>, messages: Vec<Vec<
     };
 
     // Message digest
-    let sig_hash = message_digest(messages);
+    let sig_hash = message_digest(messages)?;
 
     // ECDSA sign
     let mut rng = thread_rng();
@@ -188,7 +188,7 @@ fn cairo_binding_sig_sign(private_key_segments: Vec<Vec<u8>>, messages: Vec<Vec<
     ret.extend(signature.s.to_bytes_be());
     // We don't need the v to recover pubkey
     // ret.extend(signature.v.to_bytes_be());
-    ret
+    Ok(ret)
 }
 
 // The pub_key_segments are delta commitments in compliance input inputs.
@@ -197,7 +197,7 @@ fn cairo_binding_sig_verify(
     pub_key_segments: Vec<Vec<u8>>,
     messages: Vec<Vec<u8>>,
     signature: Vec<u8>,
-) -> bool {
+) -> NifResult<bool> {
     // Generate the public key
     let pub_key = pub_key_segments
         .into_iter()
@@ -220,7 +220,7 @@ fn cairo_binding_sig_verify(
         .x();
 
     // Message digest
-    let msg = message_digest(messages);
+    let msg = message_digest(messages)?;
 
     // Decode the signature
     let r = Felt::from_bytes_be(
@@ -235,40 +235,40 @@ fn cairo_binding_sig_verify(
     );
 
     // Verify the signature
-    verify(&pub_key, &msg, &r, &s).unwrap()
+    Ok(verify(&pub_key, &msg, &r, &s).unwrap())
 }
 
 // random_felt can help create private key in signature
 #[rustler::nif]
-fn cairo_random_felt() -> Vec<u8> {
+fn cairo_random_felt() -> NifResult<Vec<u8>> {
     let mut rng = thread_rng();
     let mut felt: [u8; 32] = Default::default();
     rng.fill_bytes(&mut felt);
     let felt = Felt::from_bytes_be_slice(&felt);
-    felt.to_bytes_be().to_vec()
+    Ok(felt.to_bytes_be().to_vec())
 }
 
 #[rustler::nif]
-fn cairo_get_binding_sig_public_key(priv_key: Vec<u8>) -> Vec<u8> {
+fn cairo_get_binding_sig_public_key(priv_key: Vec<u8>) -> NifResult<Vec<u8>> {
     let priv_key_felt = Felt::from_bytes_be_slice(&priv_key);
     let generator = ProjectivePoint::from_affine(GENERATOR.x(), GENERATOR.y()).unwrap();
     let pub_key = (&generator * priv_key_felt).to_affine().unwrap();
     let mut ret = pub_key.x().to_bytes_be().to_vec();
     let mut y = pub_key.y().to_bytes_be().to_vec();
     ret.append(&mut y);
-    ret
+    Ok(ret)
 }
 
-fn message_digest(msg: Vec<Vec<u8>>) -> Felt {
+fn message_digest(msg: Vec<Vec<u8>>) -> NifResult<Felt> {
     let felt_msg_vec: Vec<Felt> = msg
         .into_iter()
         .map(|bytes| Felt::from_bytes_be(&bytes.try_into().expect("Slice with incorrect length")))
         .collect();
-    poseidon_hash_many(&felt_msg_vec)
+    Ok(poseidon_hash_many(&felt_msg_vec))
 }
 
 #[rustler::nif]
-fn poseidon_single(x: Vec<u8>) -> Vec<u8> {
+fn poseidon_single(x: Vec<u8>) -> NifResult<Vec<u8>> {
     let mut padded_x = x;
     padded_x.resize(32, 0);
     let x_bytes: [u8; 32] = padded_x
@@ -276,11 +276,11 @@ fn poseidon_single(x: Vec<u8>) -> Vec<u8> {
         .try_into()
         .expect("Slice with incorrect length");
     let x_field = Felt::from_bytes_be(&x_bytes);
-    poseidon_hash_single(x_field).to_bytes_be().to_vec()
+    Ok(poseidon_hash_single(x_field).to_bytes_be().to_vec())
 }
 
 #[rustler::nif]
-fn poseidon(x: Vec<u8>, y: Vec<u8>) -> Vec<u8> {
+fn poseidon(x: Vec<u8>, y: Vec<u8>) -> NifResult<Vec<u8>> {
     let x_bytes: [u8; 32] = x
         .as_slice()
         .try_into()
@@ -291,11 +291,11 @@ fn poseidon(x: Vec<u8>, y: Vec<u8>) -> Vec<u8> {
         .try_into()
         .expect("Slice with incorrect length");
     let y_field = Felt::from_bytes_be(&y_bytes);
-    poseidon_hash(x_field, y_field).to_bytes_be().to_vec()
+    Ok(poseidon_hash(x_field, y_field).to_bytes_be().to_vec())
 }
 
 #[rustler::nif]
-fn poseidon_many(inputs: Vec<Vec<u8>>) -> Vec<u8> {
+fn poseidon_many(inputs: Vec<Vec<u8>>) -> NifResult<Vec<u8>> {
     let mut vec_fe = Vec::new();
     for i in inputs {
         let i_bytes: [u8; 32] = i
@@ -305,20 +305,20 @@ fn poseidon_many(inputs: Vec<Vec<u8>>) -> Vec<u8> {
         vec_fe.push(Felt::from_bytes_be(&i_bytes))
     }
     let result_fe = poseidon_hash_many(&vec_fe);
-    result_fe.to_bytes_be().to_vec()
+    Ok(result_fe.to_bytes_be().to_vec())
 }
 
 // Get the program from public inputs and return the program hash as the
 // resource label
 #[rustler::nif]
-fn program_hash(public_inputs: Vec<u8>) -> Vec<u8> {
+fn program_hash(public_inputs: Vec<u8>) -> NifResult<Vec<u8>> {
     let (pub_inputs, _): (PublicInputs, usize) =
         bincode::serde::decode_from_slice(&public_inputs, bincode::config::standard()).unwrap();
     let program_segments = match pub_inputs.memory_segments.get(&SegmentName::Program) {
         Some(segment) => segment,
         None => {
             eprintln!("Error: 'Program' segment not found in memory_segments");
-            return vec![];
+            return Ok(vec![]);
         }
     };
 
@@ -337,13 +337,13 @@ fn program_hash(public_inputs: Vec<u8>) -> Vec<u8> {
                 "Error: Address {:?} not found in public memory",
                 addr_field_element
             );
-            return vec![];
+            return Ok(vec![]);
         }
     }
 
     let program_hash = poseidon_hash_many(&program);
 
-    program_hash.to_bytes_be().to_vec()
+    Ok(program_hash.to_bytes_be().to_vec())
 }
 
 rustler::init!(
