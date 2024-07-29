@@ -63,9 +63,10 @@ main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field
   -- Check the input resource commitment:
   let
   input_npk : Field := poseidonHash2 (Resource.npk input) 0;
-  PRF_EXPAND_PERSONALIZATION_TO_FIELD : Field := poseidonHash1 12345;
-  input_psi := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 0; Resource.rseed input; Resource.nonce input];
-  input_rcm := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 1; Resource.rseed input; Resource.nonce input];
+  -- PRF_EXPAND_PERSONALIZATION_FELT is from cairo_prover/src/lib.rs/PRF_EXPAND_PERSONALIZATION_FELT
+  PRF_EXPAND_PERSONALIZATION_FELT := 89564067232354163924078705540990330212;
+  input_psi := poseidonHashList [PRF_EXPAND_PERSONALIZATION_FELT; 0; Resource.rseed input; Resource.nonce input];
+  input_rcm := poseidonHashList [PRF_EXPAND_PERSONALIZATION_FELT; 1; Resource.rseed input; Resource.nonce input];
 
   eph_field : Field :=
   if
@@ -79,8 +80,8 @@ main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field
 
 
   -- Check the output resource commitment
-  output_psi := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 0; Resource.rseed output; Resource.nonce output];
-  output_rcm := poseidonHashList [PRF_EXPAND_PERSONALIZATION_TO_FIELD; 1; Resource.rseed output; Resource.nonce output];
+  output_psi := poseidonHashList [PRF_EXPAND_PERSONALIZATION_FELT; 0; Resource.rseed output; Resource.nonce output];
+  output_rcm := poseidonHashList [PRF_EXPAND_PERSONALIZATION_FELT; 1; Resource.rseed output; Resource.nonce output];
   output_cm_ := poseidonHashList [Resource.logic output; Resource.label output; Resource.data output; Resource.npk output; input_cm; output_psi; Resource.quantity output; eph_field; output_rcm];
 
   root_ :=
