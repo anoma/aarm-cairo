@@ -38,7 +38,7 @@ defmodule Cairo do
     to: Cairo.CairoProver,
     as: :cairo_get_compliance_output
 
-  @spec sign(list(list(byte())), list(list(byte()))) :: list(byte())
+  @spec sign(list(byte()), list(list(byte()))) :: list(byte())
   defdelegate sign(private_key_segments, messages),
     to: Cairo.CairoProver,
     as: :cairo_binding_sig_sign
