@@ -152,11 +152,11 @@ fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>>
 // The private_key_segments are random values used in delta commitments.
 // The messages are nullifiers and resource commitments in the transaction.
 #[rustler::nif]
-fn cairo_binding_sig_sign(private_key_segments: Vec<Vec<u8>>, messages: Vec<Vec<u8>>) -> Vec<u8> {
+fn cairo_binding_sig_sign(private_key_segments: Vec<u8>, messages: Vec<Vec<u8>>) -> Vec<u8> {
     // Compute private key
     let private_key = {
         let result = private_key_segments
-            .iter()
+            .chunks(32)
             .fold(BigInt::zero(), |acc, key_segment| {
                 let key = BigInt::from_bytes_be(num_bigint::Sign::Plus, &key_segment);
                 acc.add(key)
