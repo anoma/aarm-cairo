@@ -1,3 +1,5 @@
+mod errors;
+
 use cairo_platinum_prover::{
     air::{generate_cairo_proof, verify_cairo_proof, PublicInputs, Segment, SegmentName},
     cairo_mem::CairoMemory,
@@ -11,7 +13,7 @@ use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::Zero;
 use rand::{thread_rng, RngCore};
-use rustler::NifResult;
+use rustler::{Error, NifResult};
 use stark_platinum_prover::proof::options::{ProofOptions, SecurityLevel};
 use starknet_crypto::{poseidon_hash, poseidon_hash_many, poseidon_hash_single, sign, verify};
 use starknet_curve::curve_params::{EC_ORDER, GENERATOR};
@@ -19,61 +21,21 @@ use starknet_types_core::{
     curve::{AffinePoint, ProjectivePoint},
     felt::Felt,
 };
+use crate::errors::{CairoProveError, CairoVerifyError, CairoGetOutputError, CairoSignError, CairoBindingSigVerifyError, CairoBindingSigError};
 use std::ops::Add;
 
 #[rustler::nif(schedule = "DirtyCpu")]
 fn cairo_prove(trace: Vec<u8>, memory: Vec<u8>, public_input: Vec<u8>) -> NifResult<(Vec<u8>, Vec<u8>)> {
     // Generating the prover args
-    let register_states = RegisterStates::from_bytes_le(&trace).unwrap();
-    let memory = CairoMemory::from_bytes_le(&memory).unwrap();
+    let register_states = RegisterStates::from_bytes_le(&trace)
+        .map_err(|e| Error::Term(Box::new(CairoProveError::RegisterStatesError(format!("{:?}", e)))))?;
+
+    let memory = CairoMemory::from_bytes_le(&memory)
+        .map_err(|e| Error::Term(Box::new(CairoProveError::CairoMemoryError(format!("{:?}", e)))))?;
 
     // Handle public inputs
-    let rc_min = u16::from_le_bytes(public_input[0..2].try_into().unwrap());
-    let rc_max = u16::from_le_bytes(public_input[2..4].try_into().unwrap());
-    let mem_len = u64::from_le_bytes(public_input[4..12].try_into().unwrap()) as usize;
-    let mut public_memory: hashbrown::HashMap<Felt252, Felt252> = HashMap::new();
-    for i in 0..mem_len {
-        let start_index = 12 + i * 40;
-        let addr = Felt252::from(u64::from_le_bytes(
-            public_input[start_index..start_index + 8]
-                .try_into()
-                .unwrap(),
-        ));
-        let value = Felt252::from_bytes_le(
-            public_input[start_index + 8..start_index + 40]
-                .try_into()
-                .unwrap(),
-        )
-        .unwrap();
-        public_memory.insert(addr, value);
-    }
-
-    let memory_segments_len = public_input[12 + 40 * mem_len] as usize;
-    let mut memory_segments = HashMap::new();
-    for i in 0..memory_segments_len {
-        let start_index = 12 + 40 * mem_len + 1 + i * 17;
-        let segment_type = match public_input[start_index] {
-            0u8 => SegmentName::RangeCheck,
-            1u8 => SegmentName::Output,
-            2u8 => SegmentName::Program,
-            3u8 => SegmentName::Execution,
-            4u8 => SegmentName::Ecdsa,
-            5u8 => SegmentName::Pedersen,
-            _ => continue, // skip unknown type
-        };
-
-        let segment_begin = u64::from_le_bytes(
-            public_input[start_index + 1..start_index + 9]
-                .try_into()
-                .unwrap(),
-        );
-        let segment_stop = u64::from_le_bytes(
-            public_input[start_index + 9..start_index + 17]
-                .try_into()
-                .unwrap(),
-        );
-        memory_segments.insert(segment_type, Segment::new(segment_begin, segment_stop));
-    }
+    let (rc_min, rc_max, public_memory, memory_segments) = parse_public_input(&public_input)
+        .map_err(|e| Error::Term(Box::new(CairoProveError::PublicInputError(e.to_string()))))?;
 
     let num_steps = register_states.steps();
     let mut pub_inputs = PublicInputs {
@@ -94,58 +56,135 @@ fn cairo_prove(trace: Vec<u8>, memory: Vec<u8>, public_input: Vec<u8>) -> NifRes
 
     // Generating proof
     let proof_options = ProofOptions::new_secure(SecurityLevel::Conjecturable100Bits, 3);
-    let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).unwrap();
+    let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options)
+        .map_err(|e| Error::Term(Box::new(CairoProveError::ProofGenerationError(format!("{:?}", e)))))?;
 
     // Encode proof and pub_inputs
-    let proof_bytes = bincode::serde::encode_to_vec(proof, bincode::config::standard()).unwrap();
-    let pub_input_bytes =
-        bincode::serde::encode_to_vec(&pub_inputs, bincode::config::standard()).unwrap();
+    let proof_bytes = bincode::serde::encode_to_vec(proof, bincode::config::standard())
+        .map_err(|e| Error::Term(Box::new(CairoProveError::EncodingError(format!("{:?}", e)))))?;
+    let pub_input_bytes = bincode::serde::encode_to_vec(&pub_inputs, bincode::config::standard())
+        .map_err(|e| Error::Term(Box::new(CairoProveError::EncodingError(format!("{:?}", e)))))?;
 
     Ok((proof_bytes, pub_input_bytes))
 }
+
+fn parse_public_input(public_input: &[u8]) -> Result<(u16, u16, HashMap<Felt252, Felt252>, HashMap<SegmentName, Segment>), &'static str> {
+    let rc_min = u16::from_le_bytes(
+        public_input.get(0..2)
+            .ok_or("Input must be at least 2 bytes long for rc_min")?
+            .try_into()
+            .map_err(|_| "Failed to convert rc_min bytes")?
+    );
+
+    let rc_max = u16::from_le_bytes(
+        public_input.get(2..4)
+            .ok_or("Input must be at least 4 bytes long for rc_max")?
+            .try_into()
+            .map_err(|_| "Failed to convert rc_max bytes")?
+    );
+
+    let mem_len = u64::from_le_bytes(
+        public_input.get(4..12)
+            .ok_or("Input must be at least 12 bytes long for mem_len")?
+            .try_into()
+            .map_err(|_| "Failed to convert mem_len bytes")?
+    ) as usize;
+
+    let mut public_memory: HashMap<Felt252, Felt252> = HashMap::new();
+    for i in 0..mem_len {
+        let start_index = 12 + i * 40;
+        let addr = Felt252::from(u64::from_le_bytes(
+            public_input.get(start_index..start_index + 8)
+                .ok_or("Input too short for public memory address")?
+                .try_into()
+                .map_err(|_| "Failed to convert public memory address bytes")?
+        ));
+        let value = Felt252::from_bytes_le(
+            public_input.get(start_index + 8..start_index + 40)
+                .ok_or("Input too short for public memory value")?
+                .try_into()
+                .map_err(|_| "Failed to convert public memory value bytes")?
+        ).map_err(|_| "Failed to create Felt252 from bytes")?;
+        public_memory.insert(addr, value);
+    }
+
+    let memory_segments_len = *public_input.get(12 + 40 * mem_len)
+        .ok_or("Input too short for memory segments length")? as usize;
+    let mut memory_segments = HashMap::new();
+    for i in 0..memory_segments_len {
+        let start_index = 12 + 40 * mem_len + 1 + i * 17;
+        let segment_type = match public_input.get(start_index)
+            .ok_or("Input too short for segment type")?
+        {
+            0u8 => SegmentName::RangeCheck,
+            1u8 => SegmentName::Output,
+            2u8 => SegmentName::Program,
+            3u8 => SegmentName::Execution,
+            4u8 => SegmentName::Ecdsa,
+            5u8 => SegmentName::Pedersen,
+            _ => continue, // skip unknown type
+        };
+
+        let segment_begin = u64::from_le_bytes(
+            public_input.get(start_index + 1..start_index + 9)
+                .ok_or("Input too short for segment begin")?
+                .try_into()
+                .map_err(|_| "Failed to convert segment begin bytes")?
+        );
+        let segment_stop = u64::from_le_bytes(
+            public_input.get(start_index + 9..start_index + 17)
+                .ok_or("Input too short for segment stop")?
+                .try_into()
+                .map_err(|_| "Failed to convert segment stop bytes")?
+        );
+        memory_segments.insert(segment_type, Segment::new(segment_begin, segment_stop));
+    }
+
+    Ok((rc_min, rc_max, public_memory, memory_segments))
+}
+
 
 #[rustler::nif(schedule = "DirtyCpu")]
 fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> NifResult<bool> {
     let proof_options = ProofOptions::new_secure(SecurityLevel::Conjecturable100Bits, 3);
 
-    let (proof, _) =
-        bincode::serde::decode_from_slice(&proof, bincode::config::standard()).unwrap();
+    // Decode proof
+    let proof = bincode::serde::decode_from_slice(&proof, bincode::config::standard())
+        .map_err(|e| Error::Term(Box::new(CairoVerifyError::ProofDecodingError(e.to_string()))))?
+        .0;
 
-    let (pub_inputs, _) =
-        bincode::serde::decode_from_slice(&public_input, bincode::config::standard()).unwrap();
+    // Decode public inputs
+    let pub_inputs = bincode::serde::decode_from_slice(&public_input, bincode::config::standard())
+        .map_err(|e| Error::Term(Box::new(CairoVerifyError::PublicInputDecodingError(e.to_string()))))?
+        .0;
 
     Ok(verify_cairo_proof(&proof, &pub_inputs, &proof_options))
 }
 
 #[rustler::nif()]
-fn cairo_get_compliance_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
-    let (pub_inputs, _): (PublicInputs, usize) =
-        bincode::serde::decode_from_slice(&public_input, bincode::config::standard()).unwrap();
-    let output_segments = match pub_inputs.memory_segments.get(&SegmentName::Output) {
-        Some(segment) => segment,
-        None => {
-            eprintln!("Error: 'Output' segment not found in memory_segments");
-            return Ok(vec![]);
-        }
-    };
+fn cairo_get_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
+    // Decode public inputs
+    let (pub_inputs, _): (PublicInputs, usize) = bincode::serde::decode_from_slice(&public_input, bincode::config::standard())
+        .map_err(|e| Error::Term(Box::new(CairoGetOutputError::DecodingError(e.to_string()))))?;
 
-    let begin_addr: u64 = output_segments.begin_addr.try_into().unwrap();
-    let stop_addr: u64 = output_segments.stop_ptr.try_into().unwrap();
+    // Get output segments
+    let output_segments = pub_inputs.memory_segments.get(&SegmentName::Output)
+        .ok_or_else(|| Error::Term(Box::new(CairoGetOutputError::SegmentNotFound)))?;
+
+    let begin_addr: u64 = output_segments.begin_addr as u64;
+    let stop_addr: u64 = output_segments.stop_ptr as u64;
 
     let mut output_values = Vec::new();
     for addr in begin_addr..stop_addr {
-        // Convert addr to FieldElement (assuming this is the correct way to create a FieldElement from an address)
         let addr_field_element = Felt252::from(addr);
 
         if let Some(value) = pub_inputs.public_memory.get(&addr_field_element) {
             output_values.push(value.clone().to_bytes_be().to_vec());
         } else {
-            eprintln!(
-                "Error: Address {:?} not found in public memory",
-                addr_field_element
-            );
+            return Err(Error::Term(Box::new(CairoGetOutputError::AddressNotFound(addr))));
         }
     }
+
     Ok(output_values)
 }
 
@@ -180,7 +219,8 @@ fn cairo_binding_sig_sign(private_key_segments: Vec<Vec<u8>>, messages: Vec<Vec<
         rng.fill_bytes(&mut felt);
         Felt::from_bytes_be(&felt)
     };
-    let signature = sign(&private_key, &sig_hash, &k).unwrap();
+    let signature = sign(&private_key, &sig_hash, &k)
+        .map_err(|e| Error::Term(Box::new(CairoSignError::SignatureGenerationError(e.to_string()))))?;
 
     // Serialize signature
     let mut ret = Vec::new();
@@ -201,41 +241,27 @@ fn cairo_binding_sig_verify(
     // Generate the public key
     let pub_key = pub_key_segments
         .into_iter()
-        .fold(ProjectivePoint::identity(), |acc, bytes| {
-            let key_x = Felt::from_bytes_be(
-                &bytes[0..32]
-                    .try_into()
-                    .expect("Slice with incorrect length"),
-            );
-            let key_y = Felt::from_bytes_be(
-                &bytes[32..64]
-                    .try_into()
-                    .expect("Slice with incorrect length"),
-            );
-            let key_segment_affine = AffinePoint::new(key_x, key_y).unwrap();
-            acc.add(key_segment_affine)
+        .try_fold(ProjectivePoint::identity(), |acc, bytes| {
+            let key_x = Felt::from_bytes_be(&bytes[0..32].try_into().map_err(|_| CairoBindingSigVerifyError::InputError)?);
+            let key_y = Felt::from_bytes_be(&bytes[32..64].try_into().map_err(|_| CairoBindingSigVerifyError::InputError)?);
+            let key_segment_affine = AffinePoint::new(key_x, key_y).map_err(|_| CairoBindingSigVerifyError::InputError)?;
+            Ok(acc.add(key_segment_affine))
         })
+        .map_err(|e: CairoBindingSigVerifyError| Error::Term(Box::new(e)))?
         .to_affine()
-        .unwrap()
+        .map_err(|_| Error::Term(Box::new(CairoBindingSigVerifyError::InputError)))?
         .x();
 
     // Message digest
     let msg = message_digest(messages)?;
 
     // Decode the signature
-    let r = Felt::from_bytes_be(
-        &signature[0..32]
-            .try_into()
-            .expect("Slice with incorrect length"),
-    );
-    let s = Felt::from_bytes_be(
-        &signature[32..64]
-            .try_into()
-            .expect("Slice with incorrect length"),
-    );
+    let r = Felt::from_bytes_be(signature[0..32].try_into().map_err(|_| Error::Term(Box::new(CairoBindingSigVerifyError::InputError)))?);
+    let s = Felt::from_bytes_be(signature[32..64].try_into().map_err(|_| Error::Term(Box::new(CairoBindingSigVerifyError::InputError)))?);
 
     // Verify the signature
-    Ok(verify(&pub_key, &msg, &r, &s).unwrap())
+    verify(&pub_key, &msg, &r, &s)
+        .map_err(|_| Error::Term(Box::new(CairoBindingSigVerifyError::VerificationError)))
 }
 
 // random_felt can help create private key in signature
@@ -251,14 +277,19 @@ fn cairo_random_felt() -> NifResult<Vec<u8>> {
 #[rustler::nif]
 fn cairo_get_binding_sig_public_key(priv_key: Vec<u8>) -> NifResult<Vec<u8>> {
     let priv_key_felt = Felt::from_bytes_be_slice(&priv_key);
-    let generator = ProjectivePoint::from_affine(GENERATOR.x(), GENERATOR.y()).unwrap();
-    let pub_key = (&generator * priv_key_felt).to_affine().unwrap();
+
+    let generator = ProjectivePoint::from_affine(GENERATOR.x(), GENERATOR.y())
+        .map_err(|_| Error::Term(Box::new(CairoBindingSigError::KeyGenerationError)))?;
+
+    let pub_key = (&generator * priv_key_felt)
+        .to_affine()
+        .map_err(|_| Error::Term(Box::new(CairoBindingSigError::KeyGenerationError)))?;
+
     let mut ret = pub_key.x().to_bytes_be().to_vec();
     let mut y = pub_key.y().to_bytes_be().to_vec();
     ret.append(&mut y);
     Ok(ret)
 }
-
 fn message_digest(msg: Vec<Vec<u8>>) -> NifResult<Felt> {
     let felt_msg_vec: Vec<Felt> = msg
         .into_iter()
@@ -322,8 +353,8 @@ fn program_hash(public_inputs: Vec<u8>) -> NifResult<Vec<u8>> {
         }
     };
 
-    let begin_addr: u64 = program_segments.begin_addr.try_into().unwrap();
-    let stop_addr: u64 = program_segments.stop_ptr.try_into().unwrap();
+    let begin_addr: u64 = program_segments.begin_addr as u64;
+    let stop_addr: u64 = program_segments.stop_ptr as u64;
 
     let mut program = Vec::new();
     for addr in begin_addr..stop_addr {
@@ -351,7 +382,7 @@ rustler::init!(
     [
         cairo_prove,
         cairo_verify,
-        cairo_get_compliance_output,
+        cairo_get_output,
         cairo_binding_sig_sign,
         cairo_binding_sig_verify,
         cairo_random_felt,

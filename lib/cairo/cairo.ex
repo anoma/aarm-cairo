@@ -16,8 +16,8 @@ defmodule Cairo.CairoProver do
   @spec cairo_verify(list(byte()), list(byte())) :: nif_result(boolean())
   def cairo_verify(_proof, _pubinput), do: error()
 
-  @spec cairo_get_compliance_output(list(byte())) :: nif_result(list(list(byte())))
-  def cairo_get_compliance_output(_public_input), do: error()
+  @spec cairo_get_output(list(byte())) :: nif_result(list(list(byte())))
+  def cairo_get_output(_public_input), do: error()
 
   @spec cairo_binding_sig_sign(list(list(byte())), list(list(byte()))) :: nif_result(list(byte()))
   def cairo_binding_sig_sign(_private_key_segments, _messages), do: error()

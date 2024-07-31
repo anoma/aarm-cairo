@@ -34,11 +34,11 @@ defmodule Cairo do
     to: Cairo.CairoProver,
     as: :cairo_verify
 
-  @spec get_compliance_output(list(byte())) ::
+  @spec get_output(list(byte())) ::
     {:ok, {any()}} | {:error, term()}
-  defdelegate get_compliance_output(pub_input),
+  defdelegate get_output(pub_input),
     to: Cairo.CairoProver,
-    as: :cairo_get_compliance_output
+    as: :cairo_get_output
 
   @spec sign(list(list(byte())), list(list(byte()))) ::
     {:ok, {list(byte())}} | {:error, term()}

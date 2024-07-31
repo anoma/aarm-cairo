@@ -8,7 +8,7 @@ defmodule CairoComplianceTest do
     {:ok, program} = File.read("./native/cairo_vm/compliance.json")
     {:ok, input} = File.read("./native/cairo_vm/compliance_input.json")
 
-    {output, trace, memory, public_inputs} =
+    {_output, trace, memory, public_inputs} =
       Cairo.cairo_vm_runner(
         program,
         input
@@ -18,6 +18,6 @@ defmodule CairoComplianceTest do
     {proof, public_input} = Cairo.prove(trace, memory, public_inputs)
     assert true = Cairo.verify(proof, public_input)
 
-    Cairo.get_compliance_output(public_input)
+    Cairo.get_output(public_input)
   end
 end
