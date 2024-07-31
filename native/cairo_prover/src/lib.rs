@@ -406,3 +406,11 @@ fn test_prf_expand_personalization() {
         .to_hex_string()
     );
 }
+
+#[test]
+fn generate_compliance_input_test_params() {
+    println!("Felf one hex: {:?}", Felt::ONE.to_hex_string());
+    let input_nf_key = Felt::ONE;
+    let input_npk = poseidon_hash(input_nf_key, Felt::ZERO);
+    println!("input_npk: {:?}", input_npk.to_hex_string());
+}

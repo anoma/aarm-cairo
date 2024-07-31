@@ -21,9 +21,9 @@ defmodule NifTest do
     assert true = Cairo.verify(proof, public_input)
 
     # Get program hash
-    program_hash =
+    _program_hash =
       Cairo.get_program_hash(public_input) |> Cairo.felt_to_string()
 
-    IO.inspect(program_hash)
+    # IO.inspect(program_hash)
   end
 end
