@@ -58,11 +58,13 @@ check_merkle_path (cur : Field) : (List (Field × Bool)) -> Field
   | (p :: ps) := check_merkle_path (check_merkle cur p) ps;
 
 
-main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field) (eph_root : Field): ComplianceResult :=
+main (input output : Resource) (input_nf_key : Field) (merkle_path : List (Field × Bool)) (rcv : Field) (eph_root : Field): ComplianceResult :=
 
   -- Check the input resource commitment:
-  let
-  input_npk : Field := poseidonHash2 (Resource.npk input) 0;
+  let input_npk : Field := poseidonHash2 input_nf_key 0;
+
+  -- check outside of circuit: assert input_npk == (Resource.npk input)
+
   -- PRF_EXPAND_PERSONALIZATION_FELT is from cairo_prover/src/lib.rs/PRF_EXPAND_PERSONALIZATION_FELT
   PRF_EXPAND_PERSONALIZATION_FELT := 89564067232354163924078705540990330212;
   input_psi := poseidonHashList [PRF_EXPAND_PERSONALIZATION_FELT; 0; Resource.rseed input; Resource.nonce input];
@@ -76,7 +78,7 @@ main (input output : Resource) (merkle_path : List (Field × Bool)) (rcv : Field
   input_cm := poseidonHashList [Resource.logic input; Resource.label input; Resource.data input; input_npk; Resource.nonce input; input_psi; Resource.quantity input; eph_field; input_rcm];
 
   -- Generate the nullifier of input resource
-  input_nullifier_ := poseidonHashList [(Resource.npk input);  (Resource.nonce input);  input_psi;  input_cm];
+  input_nullifier_ := poseidonHashList [input_npk;  (Resource.nonce input);  input_psi;  input_cm];
 
 
   -- Check the output resource commitment

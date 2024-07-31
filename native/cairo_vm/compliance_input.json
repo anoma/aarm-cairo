@@ -19,6 +19,7 @@
         "npk" : 195,
         "rseed" : 16
     },
+    "input_nf_key": 11,
     "merkle_path": [{"fst": 33, "snd": true}, {"fst": 83, "snd": false}, {"fst": 73, "snd": false}, {"fst": 23, "snd": false}, {"fst": 33, "snd": false}, {"fst": 43, "snd": false}, {"fst": 53, "snd": false}, {"fst": 3, "snd": false}, {"fst": 36, "snd": false}, {"fst": 37, "snd": false}, {"fst": 118, "snd": false}, {"fst": 129, "snd": false}, {"fst": 12, "snd": true}, {"fst": 33, "snd": false}, {"fst": 43, "snd": false}, {"fst": 156, "snd": true}, {"fst": 63, "snd": false}, {"fst": 128, "snd": false}, {"fst": 32, "snd": false}, {"fst": 230, "snd": true}, {"fst": 3, "snd": false}, {"fst": 33, "snd": false}, {"fst": 223, "snd": false}, {"fst": 2032, "snd": true}, {"fst": 32, "snd": false}, {"fst": 323, "snd": false}, {"fst": 3223, "snd": false}, {"fst": 203, "snd": true}, {"fst": 31, "snd": false}, {"fst": 32, "snd": false}, {"fst": 22, "snd": false}, {"fst": 23, "snd": true}],
     "rcv": 3,
     "eph_root": 4
