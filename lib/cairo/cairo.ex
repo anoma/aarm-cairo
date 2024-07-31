@@ -43,6 +43,9 @@ defmodule Cairo.CairoProver do
 
   def program_hash(_public_inputs),
     do: :erlang.nif_error(:nif_not_loaded)
+
+  def felt_to_string(_felt),
+    do: :erlang.nif_error(:nif_not_loaded)
 end
 
 defmodule Cairo.CairoVM do

@@ -346,6 +346,16 @@ fn program_hash(public_inputs: Vec<u8>) -> Vec<u8> {
     program_hash.to_bytes_be().to_vec()
 }
 
+#[rustler::nif]
+fn felt_to_string(felt: Vec<u8>) -> String {
+    Felt::from_bytes_be(
+        felt.as_slice()
+            .try_into()
+            .expect("Slice with incorrect length"),
+    )
+    .to_hex_string()
+}
+
 rustler::init!(
     "Elixir.Cairo.CairoProver",
     [
@@ -360,6 +370,7 @@ rustler::init!(
         poseidon,
         poseidon_many,
         program_hash,
+        felt_to_string,
     ]
 );
 
