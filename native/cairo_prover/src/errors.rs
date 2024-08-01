@@ -12,9 +12,13 @@ pub(crate) enum CairoProveError {
 impl std::fmt::Display for CairoProveError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            CairoProveError::RegisterStatesError(msg) => write!(f, "Register states error: {}", msg),
+            CairoProveError::RegisterStatesError(msg) => {
+                write!(f, "Register states error: {}", msg)
+            }
             CairoProveError::CairoMemoryError(msg) => write!(f, "Cairo memory error: {}", msg),
-            CairoProveError::ProofGenerationError(msg) => write!(f, "Proof generation failed: {}", msg),
+            CairoProveError::ProofGenerationError(msg) => {
+                write!(f, "Proof generation failed: {}", msg)
+            }
             CairoProveError::PublicInputError(msg) => write!(f, "Public input error: {}", msg),
             CairoProveError::EncodingError(msg) => write!(f, "Encoding error: {}", msg),
         }
@@ -27,7 +31,6 @@ impl Encoder for CairoProveError {
     }
 }
 
-
 #[derive(Debug)]
 pub(crate) enum CairoVerifyError {
     ProofDecodingError(String),
@@ -38,7 +41,9 @@ impl std::fmt::Display for CairoVerifyError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             CairoVerifyError::ProofDecodingError(msg) => write!(f, "Proof decoding error: {}", msg),
-            CairoVerifyError::PublicInputDecodingError(msg) => write!(f, "Public input decoding error: {}", msg),
+            CairoVerifyError::PublicInputDecodingError(msg) => {
+                write!(f, "Public input decoding error: {}", msg)
+            }
         }
     }
 }
@@ -60,8 +65,12 @@ impl std::fmt::Display for CairoGetOutputError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             CairoGetOutputError::DecodingError(msg) => write!(f, "Decoding error: {}", msg),
-            CairoGetOutputError::SegmentNotFound => write!(f, "Output segment not found in memory segments"),
-            CairoGetOutputError::AddressNotFound(addr) => write!(f, "Address {} not found in public memory", addr),
+            CairoGetOutputError::SegmentNotFound => {
+                write!(f, "Output segment not found in memory segments")
+            }
+            CairoGetOutputError::AddressNotFound(addr) => {
+                write!(f, "Address {} not found in public memory", addr)
+            }
         }
     }
 }
@@ -80,7 +89,9 @@ pub(crate) enum CairoSignError {
 impl std::fmt::Display for CairoSignError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            CairoSignError::SignatureGenerationError(msg) => write!(f, "Binding Signature generation error: {}", msg),
+            CairoSignError::SignatureGenerationError(msg) => {
+                write!(f, "Binding Signature generation error: {}", msg)
+            }
         }
     }
 }
@@ -101,7 +112,9 @@ impl std::fmt::Display for CairoBindingSigVerifyError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             CairoBindingSigVerifyError::InputError => write!(f, "Invalid input data"),
-            CairoBindingSigVerifyError::VerificationError => write!(f, "Signature verification failed"),
+            CairoBindingSigVerifyError::VerificationError => {
+                write!(f, "Signature verification failed")
+            }
         }
     }
 }

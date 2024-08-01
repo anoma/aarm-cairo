@@ -1,14 +1,16 @@
 mod errors;
 
+use crate::errors::CairoVMError;
 use juvix_cairo_vm::{anoma_cairo_vm_runner, program_input::ProgramInput};
-use std::collections::HashMap;
 use rustler::{Error, NifResult};
 use serde_json::Value;
-use crate::errors::CairoVMError;
-
+use std::collections::HashMap;
 
 #[rustler::nif(schedule = "DirtyCpu")]
-fn cairo_vm_runner(program_content: String, inputs: String) -> NifResult<(String, Vec<u8>, Vec<u8>, Vec<u8>)> {
+fn cairo_vm_runner(
+    program_content: String,
+    inputs: String,
+) -> NifResult<(String, Vec<u8>, Vec<u8>, Vec<u8>)> {
     // Validate program content
     serde_json::from_str::<Value>(&program_content)
         .map_err(|_| Error::Term(Box::new(CairoVMError::InvalidProgramContent)))?;
