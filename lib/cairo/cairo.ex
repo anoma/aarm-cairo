@@ -4,48 +4,48 @@ defmodule Cairo.CairoProver do
     crate: :cairo_prover
 
   @moduledoc """
-  Documentation for `CairoProver`.
+  Provides NIF functions for Cairo proof generation, verification, and related cryptographic operations.
   """
 
-  # When loading a NIF module, dummy clauses for all NIF function are required.
-  # NIF dummies usually just error out when called when the NIF is not loaded, as that should never normally happen.
-  @spec cairo_prove(list(byte()), list(byte()), list(byte())) ::
-          {list(byte()), list(byte())}
-  @spec cairo_verify(list(byte()), list(byte())) :: boolean()
+  @typedoc "Result type for NIF functions that can return errors"
+  @type nif_result(t) :: {:ok, t} | {:error, term()}
 
-  def cairo_prove(_trace, _memory, _public_input),
-    do: :erlang.nif_error(:nif_not_loaded)
+  @spec cairo_prove(list(byte()), list(byte()), list(byte())) :: nif_result({list(byte()), list(byte())})
+  def cairo_prove(_trace, _memory, _public_input), do: error()
 
-  def cairo_verify(_proof, _pub_input), do: :erlang.nif_error(:nif_not_loaded)
+  @spec cairo_verify(list(byte()), list(byte())) :: nif_result(boolean())
+  def cairo_verify(_proof, _pubinput), do: error()
 
-  def cairo_get_compliance_output(_public_input),
-    do: :erlang.nif_error(:nif_not_loaded)
+  @spec cairo_get_output(list(byte())) :: nif_result(list(list(byte())))
+  def cairo_get_output(_public_input), do: error()
 
-  def cairo_binding_sig_sign(_private_key_segments, _messages),
-    do: :erlang.nif_error(:nif_not_loaded)
+  @spec cairo_binding_sig_sign(list(list(byte())), list(list(byte()))) :: nif_result(list(byte()))
+  def cairo_binding_sig_sign(_private_key_segments, _messages), do: error()
 
-  def cairo_binding_sig_verify(_pub_key_segments, _messages, _signature),
-    do: :erlang.nif_error(:nif_not_loaded)
+  @spec cairo_binding_sig_verify(list(list(byte())), list(list(byte())), list(byte())) :: nif_result(boolean())
+  def cairo_binding_sig_verify(_pub_key_segments, _messages, _signature), do: error()
 
-  def cairo_random_felt(), do: :erlang.nif_error(:nif_not_loaded)
+  @spec cairo_random_felt() :: nif_result(list(byte()))
+  def cairo_random_felt(), do: error()
 
-  def cairo_get_binding_sig_public_key(_priv_key),
-    do: :erlang.nif_error(:nif_not_loaded)
+  @spec cairo_get_binding_sig_public_key(list(byte())) :: nif_result(list(byte()))
+  def cairo_get_binding_sig_public_key(_priv_key), do: error()
 
-  def poseidon_single(_input),
-    do: :erlang.nif_error(:nif_not_loaded)
+  @spec poseidon_single(list(byte())) :: nif_result(list(byte()))
+  def poseidon_single(_input), do: error()
 
-  def poseidon(_x, _y),
-    do: :erlang.nif_error(:nif_not_loaded)
+  @spec poseidon(list(byte()), list(byte())) :: nif_result(list(byte()))
+  def poseidon(_x, _y), do: error()
 
-  def poseidon_many(_inputs),
-    do: :erlang.nif_error(:nif_not_loaded)
+  @spec poseidon_many(list(list(byte()))) :: nif_result(list(byte()))
+  def poseidon_many(_inputs), do: error()
 
-  def program_hash(_public_inputs),
-    do: :erlang.nif_error(:nif_not_loaded)
+  @spec program_hash(list(byte())) :: nif_result(list(byte()))
+  def program_hash(_public_inputs), do: error()
 
-  def felt_to_string(_felt),
-    do: :erlang.nif_error(:nif_not_loaded)
+  def felt_to_string(_felt), do: error()
+
+  defp error, do: :erlang.nif_error(:nif_not_loaded)
 end
 
 defmodule Cairo.CairoVM do
@@ -56,12 +56,13 @@ defmodule Cairo.CairoVM do
   @moduledoc """
   Documentation for `CairoVM`.
   """
+  @typedoc "Result type for NIF functions that can return errors"
+  @type nif_result(t) :: {:ok, t} | {:error, term()}
 
   # When loading a NIF module, dummy clauses for all NIF function are required.
   # NIF dummies usually just error out when called when the NIF is not loaded, as that should never normally happen.
   @spec cairo_vm_runner(binary(), binary()) ::
-          {binary(), list(byte()), list(byte()), binary()}
-
+          nif_result({binary(), list(byte()), list(byte()), binary()})
   def cairo_vm_runner(_program_content, _program_inputs),
     do: :erlang.nif_error(:nif_not_loaded)
 end

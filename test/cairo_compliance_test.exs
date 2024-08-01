@@ -18,7 +18,7 @@ defmodule CairoComplianceTest do
     {proof, public_input} = Cairo.prove(trace, memory, public_inputs)
     assert true = Cairo.verify(proof, public_input)
 
-    Cairo.get_compliance_output(public_input)
+    Cairo.get_output(public_input)
 
     # Get program hash
     _program_hash =
