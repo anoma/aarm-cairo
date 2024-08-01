@@ -40,7 +40,7 @@ defmodule Cairo do
     to: Cairo.CairoProver,
     as: :cairo_get_output
 
-  @spec sign(list(list(byte())), list(list(byte()))) ::
+  @spec sign(list(byte()), list(list(byte()))) ::
     {:ok, {list(byte())}} | {:error, term()}
   defdelegate sign(private_key_segments, messages),
     to: Cairo.CairoProver,
@@ -87,4 +87,9 @@ defmodule Cairo do
   defdelegate get_program_hash(pub_input),
     to: Cairo.CairoProver,
     as: :program_hash
+
+  @spec felt_to_string(list(byte())) :: binary()
+  defdelegate felt_to_string(felt),
+    to: Cairo.CairoProver,
+    as: :felt_to_string
 end

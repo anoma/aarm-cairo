@@ -43,6 +43,8 @@ defmodule Cairo.CairoProver do
   @spec program_hash(list(byte())) :: nif_result(list(byte()))
   def program_hash(_public_inputs), do: error()
 
+  def felt_to_string(_felt), do: error()
+
   defp error, do: :erlang.nif_error(:nif_not_loaded)
 end
 
@@ -56,7 +58,7 @@ defmodule Cairo.CairoVM do
   """
   @typedoc "Result type for NIF functions that can return errors"
   @type nif_result(t) :: {:ok, t} | {:error, term()}
-  
+
   # When loading a NIF module, dummy clauses for all NIF function are required.
   # NIF dummies usually just error out when called when the NIF is not loaded, as that should never normally happen.
   @spec cairo_vm_runner(binary(), binary()) ::

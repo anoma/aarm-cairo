@@ -176,6 +176,7 @@ fn cairo_get_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
 
     let mut output_values = Vec::new();
     for addr in begin_addr..stop_addr {
+        // Convert addr to FieldElement (assuming this is the correct way to create a FieldElement from an address)
         let addr_field_element = Felt252::from(addr);
 
         if let Some(value) = pub_inputs.public_memory.get(&addr_field_element) {
@@ -191,11 +192,11 @@ fn cairo_get_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
 // The private_key_segments are random values used in delta commitments.
 // The messages are nullifiers and resource commitments in the transaction.
 #[rustler::nif]
-fn cairo_binding_sig_sign(private_key_segments: Vec<Vec<u8>>, messages: Vec<Vec<u8>>) -> NifResult<Vec<u8>> {
+fn cairo_binding_sig_sign(private_key_segments: Vec<u8>, messages: Vec<Vec<u8>>) -> NifResult<Vec<u8>> {
     // Compute private key
     let private_key = {
         let result = private_key_segments
-            .iter()
+            .chunks(32)
             .fold(BigInt::zero(), |acc, key_segment| {
                 let key = BigInt::from_bytes_be(num_bigint::Sign::Plus, &key_segment);
                 acc.add(key)
@@ -377,6 +378,16 @@ fn program_hash(public_inputs: Vec<u8>) -> NifResult<Vec<u8>> {
     Ok(program_hash.to_bytes_be().to_vec())
 }
 
+#[rustler::nif]
+fn felt_to_string(felt: Vec<u8>) -> String {
+    Felt::from_bytes_be(
+        felt.as_slice()
+            .try_into()
+            .expect("Slice with incorrect length"),
+    )
+    .to_hex_string()
+}
+
 rustler::init!(
     "Elixir.Cairo.CairoProver",
     [
@@ -391,5 +402,47 @@ rustler::init!(
         poseidon,
         poseidon_many,
         program_hash,
+        felt_to_string,
     ]
 );
+
+use lazy_static::lazy_static;
+lazy_static! {
+    // Bytes: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 67, 97, 105, 114, 111, 95, 69, 120, 112, 97, 110, 100, 83, 101, 101, 100]
+    // Hexstring: "0x436169726f5f457870616e6453656564"
+    // Decimal string(used in juvix): "89564067232354163924078705540990330212"
+    pub static ref PRF_EXPAND_PERSONALIZATION_FELT: Vec<u8> = {
+        let personalization: Vec<u8> = b"Cairo_ExpandSeed".to_vec();
+        let mut result = [0u8; 32];
+        result[(32 - personalization.len())..].copy_from_slice(&personalization[..]);
+
+        result.to_vec()
+    };
+}
+
+#[test]
+fn test_prf_expand_personalization() {
+    println!(
+        "PRF_EXPAND_PERSONALIZATION_FELT bytes: {:?}",
+        *PRF_EXPAND_PERSONALIZATION_FELT
+    );
+
+    println!(
+        "hex: {:?}",
+        Felt::from_bytes_be(
+            &PRF_EXPAND_PERSONALIZATION_FELT
+                .as_slice()
+                .try_into()
+                .unwrap()
+        )
+        .to_hex_string()
+    );
+}
+
+#[test]
+fn generate_compliance_input_test_params() {
+    println!("Felf one hex: {:?}", Felt::ONE.to_hex_string());
+    let input_nf_key = Felt::ONE;
+    let input_npk = poseidon_hash(input_nf_key, Felt::ZERO);
+    println!("input_npk: {:?}", input_npk.to_hex_string());
+}
