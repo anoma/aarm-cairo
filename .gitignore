@@ -41,8 +41,5 @@ Mnesia*/
 # Ignore external rust lib
 *.so
 
-# Ignore Cargo.lock
-Cargo.lock
-
 # Ignore rust target
 target/
