@@ -1,8 +1,7 @@
 module compliance;
 
 import Stdlib.Prelude open;
-import
-Stdlib.Cairo.Ec as Ec;
+import Stdlib.Cairo.Ec as Ec;
 import Stdlib.Cairo.Poseidon open;
 import Stdlib.Cairo.Pedersen open;
 
@@ -86,7 +85,7 @@ main
         ; Resource.nonce input
         ];
 
-    eph_field : Field :=
+    input_eph_field : Field :=
       if
         | Resource.eph input := 1
         | else := 0;
@@ -99,7 +98,7 @@ main
         ; Resource.nonce input
         ; input_psi
         ; Resource.quantity input
-        ; eph_field
+        ; input_eph_field
         ; input_rcm
         ];
 
@@ -114,25 +113,29 @@ main
         [ PRF_EXPAND_PERSONALIZATION_FELT
         ; 0
         ; Resource.rseed output
-        ; Resource.nonce output
+        ; input_nullifier_
         ];
     output_rcm :=
       poseidonHashList
         [ PRF_EXPAND_PERSONALIZATION_FELT
         ; 1
         ; Resource.rseed output
-        ; Resource.nonce output
+        ; input_nullifier_
         ];
+    output_eph_field : Field :=
+      if
+        | Resource.eph output := 1
+        | else := 0;
     output_cm_ :=
       poseidonHashList
         [ Resource.logic output
         ; Resource.label output
         ; Resource.data output
         ; Resource.npk output
-        ; input_cm
+        ; input_nullifier_
         ; output_psi
         ; Resource.quantity output
-        ; eph_field
+        ; output_eph_field
         ; output_rcm
         ];
 
