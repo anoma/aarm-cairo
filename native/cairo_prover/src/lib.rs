@@ -1,8 +1,14 @@
+mod compliance_input;
 mod errors;
+mod utils;
 
-use crate::errors::{
-    CairoBindingSigError, CairoBindingSigVerifyError, CairoGetOutputError, CairoProveError,
-    CairoSignError, CairoVerifyError,
+use crate::{
+    compliance_input::ComplianceInputJson,
+    errors::{
+        CairoBindingSigError, CairoBindingSigVerifyError, CairoGetOutputError, CairoProveError,
+        CairoSignError, CairoVerifyError,
+    },
+    utils::{felt_to_string, random_felt},
 };
 use cairo_platinum_prover::{
     air::{generate_cairo_proof, verify_cairo_proof, PublicInputs, Segment, SegmentName},
@@ -346,11 +352,7 @@ fn cairo_binding_sig_verify(
 // random_felt can help create private key in signature
 #[rustler::nif]
 fn cairo_random_felt() -> NifResult<Vec<u8>> {
-    let mut rng = thread_rng();
-    let mut felt: [u8; 32] = Default::default();
-    rng.fill_bytes(&mut felt);
-    let felt = Felt::from_bytes_be_slice(&felt);
-    Ok(felt.to_bytes_be().to_vec())
+    Ok(random_felt())
 }
 
 #[rustler::nif]
@@ -457,13 +459,29 @@ fn program_hash(public_inputs: Vec<u8>) -> NifResult<Vec<u8>> {
 }
 
 #[rustler::nif]
-fn felt_to_string(felt: Vec<u8>) -> String {
-    Felt::from_bytes_be(
-        felt.as_slice()
-            .try_into()
-            .expect("Slice with incorrect length"),
+fn cairo_felt_to_string(felt: Vec<u8>) -> String {
+    felt_to_string(&felt)
+}
+
+#[rustler::nif]
+fn cairo_generate_compliance_input_json(
+    input_resource: Vec<u8>,
+    output_resource: Vec<u8>,
+    path: Vec<Vec<u8>>,
+    pos: u64,
+    input_nf_key: Vec<u8>,
+    eph_root: Vec<u8>,
+    rcv: Vec<u8>,
+) -> String {
+    ComplianceInputJson::to_json_string(
+        &input_resource,
+        &output_resource,
+        &path,
+        pos,
+        &input_nf_key,
+        &eph_root,
+        &rcv,
     )
-    .to_hex_string()
 }
 
 rustler::init!(
@@ -480,7 +498,8 @@ rustler::init!(
         poseidon,
         poseidon_many,
         program_hash,
-        felt_to_string,
+        cairo_felt_to_string,
+        cairo_generate_compliance_input_json,
     ]
 );
 
@@ -522,5 +541,6 @@ fn generate_compliance_input_test_params() {
     println!("Felf one hex: {:?}", Felt::ONE.to_hex_string());
     let input_nf_key = Felt::ONE;
     let input_npk = poseidon_hash(input_nf_key, Felt::ZERO);
+    println!("input_npk: {:?}", input_npk.to_bytes_be());
     println!("input_npk: {:?}", input_npk.to_hex_string());
 }

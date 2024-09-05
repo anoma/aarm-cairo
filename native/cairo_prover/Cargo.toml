@@ -25,3 +25,4 @@ num-traits = { version = "0.2.18", default-features = false }
 num-integer = { version = "0.1.45", default-features = false }
 rand = "0.8.5"
 lazy_static = "1.4"
+serde = { version = "1.0.160", features = ["derive"] }

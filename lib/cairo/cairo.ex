@@ -51,7 +51,18 @@ defmodule Cairo.CairoProver do
   @spec program_hash(list(byte())) :: nif_result(list(byte()))
   def program_hash(_public_inputs), do: error()
 
-  def felt_to_string(_felt), do: error()
+  def cairo_felt_to_string(_felt), do: error()
+
+  def cairo_generate_compliance_input_json(
+        _input_resource,
+        _output_resource,
+        _path,
+        _position,
+        _input_nf_key,
+        _eph_root,
+        _rcv
+      ),
+      do: error()
 
   defp error, do: :erlang.nif_error(:nif_not_loaded)
 end

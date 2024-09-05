@@ -91,5 +91,27 @@ defmodule Cairo do
   @spec felt_to_string(list(byte())) :: binary()
   defdelegate felt_to_string(felt),
     to: Cairo.CairoProver,
-    as: :felt_to_string
+    as: :cairo_felt_to_string
+
+  @spec generate_compliance_input_json(
+          list(byte()),
+          list(byte()),
+          list(list(byte())),
+          integer(),
+          list(byte()),
+          list(byte()),
+          list(byte())
+        ) ::
+          binary()
+  defdelegate generate_compliance_input_json(
+                input_resource,
+                output_resource,
+                path,
+                position,
+                input_nf_key,
+                eph_root,
+                rcv
+              ),
+              to: Cairo.CairoProver,
+              as: :cairo_generate_compliance_input_json
 end
