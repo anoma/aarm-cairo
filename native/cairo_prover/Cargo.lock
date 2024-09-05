@@ -248,6 +248,7 @@ dependencies = [
  "num-traits",
  "rand",
  "rustler",
+ "serde",
  "serde_json",
  "stark-platinum-prover",
  "starknet-crypto 0.7.1",
