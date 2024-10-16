@@ -1,4 +1,7 @@
+#![allow(dead_code)]
+
 mod compliance_input;
+mod encryption;
 mod errors;
 mod utils;
 
