@@ -3,6 +3,7 @@ module encryption;
 import Stdlib.Prelude open;
 import Stdlib.Cairo.Ec as Ec;
 import Stdlib.Cairo.Poseidon open;
+import Stdlib.Debug as Debug;
 
 type Cipher :=
   mkCipher@{
@@ -71,6 +72,33 @@ encryption
 
   in Cipher.cipher_text final_cipher ++ [mac; Ec.Point.x sender_pk; Ec.Point.y sender_pk; nonce];
 
-main
-  (messages : List Field) (pk_x : Field) (pk_y : Field) (sk : Field) (nonce : Field) : List Field :=
-  encryption messages pk_x pk_y sk nonce;
+type List10 :=
+  mkList10@{
+    elem0 : Field;
+    elem1 : Field;
+    elem2 : Field;
+    elem3 : Field;
+    elem4 : Field;
+    elem5 : Field;
+    elem6 : Field;
+    elem7 : Field;
+    elem8 : Field;
+    elem9 : Field
+  };
+
+main (messages : List Field) (pk_x : Field) (pk_y : Field) (sk : Field) (nonce : Field) : List10 :=
+  case encryption messages pk_x pk_y sk nonce of
+    | [elem0; elem1; elem2; elem3; elem4; elem5; elem6; elem7; elem8; elem9] :=
+      mkList10@{
+        elem0;
+        elem1;
+        elem2;
+        elem3;
+        elem4;
+        elem5;
+        elem6;
+        elem7;
+        elem8;
+        elem9
+      }
+    | _ := mkList10 0 0 0 0 0 0 0 0 0 0;
