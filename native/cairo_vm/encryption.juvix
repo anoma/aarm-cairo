@@ -1,12 +1,11 @@
 module encryption;
 
 import Stdlib.Prelude open;
-import
-Stdlib.Cairo.Ec as Ec;
+import Stdlib.Cairo.Ec as Ec;
 import Stdlib.Cairo.Poseidon open;
 
 type Cipher :=
-  mkCipher {
+  mkCipher@{
     cipher_text : List Field;
     cur_state : Field
   };
@@ -14,15 +13,24 @@ type Cipher :=
 update_poseidon_state (cur_msg secret_key_x : Field) (cipher : Cipher) : Cipher :=
   let
     new_state := Cipher.cur_state cipher + cur_msg;
+    new_text := new_state :: Cipher.cipher_text cipher;
   in mkCipher@{
-    cipher_text := snoc (Cipher.cipher_text cipher) new_state;
+    cipher_text := new_text;
     -- cipher_text := Cipher.cipher_text cipher ++ [new_state];
     cur_state := poseidonHash2 new_state secret_key_x
   };
 
-generate_cipher (cipher : Cipher) (secret_key_x : Field) : List Field -> Cipher
-  | [] := cipher
-  | (m :: ms) := generate_cipher (update_poseidon_state m secret_key_x cipher) secret_key_x ms;
+generate_cipher (poseidon_state : Field) (secret_key_x : Field) (plaintext : List Field) : Cipher :=
+  let
+    go (cipher : Cipher) : List Field -> Cipher
+      | [] := cipher@Cipher{cipher_text := reverse (Cipher.cipher_text cipher)}
+      | (m :: ms) := go (update_poseidon_state m secret_key_x cipher) ms;
+  in go
+    mkCipher@{
+      cipher_text := [];
+      cur_state := poseidon_state
+    }
+    plaintext;
 
 -- pad_messages
 --   (messages : List Field)
@@ -52,13 +60,7 @@ encryption
     poseidon_state := poseidonHashList [secret_key_x; Ec.Point.y secret_key; nonce; 10];
 
     -- Generate cipher
-    cipher :=
-      mkCipher@{
-        cipher_text := [];
-        cur_state := poseidon_state
-      };
-
-    final_cipher := generate_cipher cipher secret_key_x plaintext;
+    final_cipher := generate_cipher poseidon_state secret_key_x plaintext;
 
     -- Get MAC
     mac := Cipher.cur_state final_cipher;
