@@ -17,7 +17,6 @@ update_poseidon_state (cur_msg secret_key_x : Field) (cipher : Cipher) : Cipher 
     new_text := new_state :: Cipher.cipher_text cipher;
   in mkCipher@{
     cipher_text := new_text;
-    -- cipher_text := Cipher.cipher_text cipher ++ [new_state];
     cur_state := poseidonHash2 new_state secret_key_x
   };
 
