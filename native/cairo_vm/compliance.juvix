@@ -37,7 +37,7 @@ type ComplianceResult :=
 
 bool (x : Field) : Bool := x * (x - 1) == 0;
 
-check_merkle (current_root : Field) : Field × Bool -> Field
+check_merkle (current_root : Field) : Pair Field Bool -> Field
   | (node, is_left) :=
     let
       pair :=
@@ -49,14 +49,14 @@ check_merkle (current_root : Field) : Field × Bool -> Field
 
 --- Check the merkle tree path validity and return the root
 check_merkle_path
-  (cur : Field) : List (Field × Bool) -> Field
+  (cur : Field) : List (Pair Field Bool) -> Field
   | [] := cur
   | (p :: ps) := check_merkle_path (check_merkle cur p) ps;
 
 main
   (input output : Resource)
   (input_nf_key : Field)
-  (merkle_path : List (Field × Bool))
+  (merkle_path : List (Pair Field  Bool))
   (rcv : Field)
   (eph_root : Field)
   : ComplianceResult :=
