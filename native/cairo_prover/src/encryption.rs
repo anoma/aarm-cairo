@@ -164,18 +164,13 @@ impl SecretKey {
 
 #[test]
 fn test_encryption() {
-    use rand::{thread_rng, RngCore};
-
     // Key generation
-    let mut rng = thread_rng();
-    let mut felt: [u8; 32] = Default::default();
-    rng.fill_bytes(&mut felt);
-    let sender_sk = Felt::from_bytes_be_slice(&felt);
+    let sender_sk = Felt::ONE;
     let pk = GENERATOR;
 
     // let key = SecretKey::from_dh_exchange(pk, random_sk);
     let messages = [Felt::ONE, Felt::ZERO, Felt::ONE];
-    let encrypt_nonce = Felt::from(23333u128);
+    let encrypt_nonce = Felt::ONE;
 
     // Encryption
     let cipher = Ciphertext::encrypt(&messages, &pk, &sender_sk, &encrypt_nonce);
