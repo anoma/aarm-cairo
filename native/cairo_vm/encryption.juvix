@@ -5,37 +5,6 @@ import Stdlib.Cairo.Ec as Ec;
 import Stdlib.Cairo.Poseidon open;
 import Stdlib.Debug as Debug;
 
-type List10 :=
-  mkList10@{
-    elem0 : Field;
-    elem1 : Field;
-    elem2 : Field;
-    elem3 : Field;
-    elem4 : Field;
-    elem5 : Field;
-    elem6 : Field;
-    elem7 : Field;
-    elem8 : Field;
-    elem9 : Field
-  };
-
-fromList (list : List Field) : List10 :=
-  case list of
-    | [elem0; elem1; elem2; elem3; elem4; elem5; elem6; elem7; elem8; elem9] :=
-      mkList10@{
-        elem0;
-        elem1;
-        elem2;
-        elem3;
-        elem4;
-        elem5;
-        elem6;
-        elem7;
-        elem8;
-        elem9
-      }
-    | _ := mkList10 0 0 0 0 0 0 0 0 0 0;
-
 type EncryptionResult :=
   mkEncryptionResult@{
     cipher_text_elem0 : Field;
