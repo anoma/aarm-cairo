@@ -382,7 +382,7 @@ fn message_digest(msg: Vec<Vec<u8>>) -> NifResult<Felt> {
 
 #[rustler::nif]
 fn poseidon_single(x: Vec<u8>) -> NifResult<Vec<u8>> {
-    let x_field = bytes_to_felt(padded_x)?;
+    let x_field = bytes_to_felt(x)?;
     Ok(poseidon_hash_single(x_field).to_bytes_be().to_vec())
 }
 
