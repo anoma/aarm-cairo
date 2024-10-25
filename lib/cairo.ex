@@ -62,7 +62,7 @@ defmodule Cairo do
           list(byte()) | {:error, term()}
   defdelegate get_public_key(priv_key),
     to: Cairo.CairoProver,
-    as: :cairo_get_binding_sig_public_key
+    as: :get_public_key
 
   @spec poseidon_single(list(byte())) ::
           list(byte()) | {:error, term()}

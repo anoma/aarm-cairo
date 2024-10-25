@@ -360,7 +360,7 @@ fn cairo_random_felt() -> NifResult<Vec<u8>> {
 }
 
 #[rustler::nif]
-fn cairo_get_binding_sig_public_key(priv_key: Vec<u8>) -> NifResult<Vec<u8>> {
+fn get_public_key(priv_key: Vec<u8>) -> NifResult<Vec<u8>> {
     let priv_key_felt = Felt::from_bytes_be_slice(&priv_key);
 
     let generator = ProjectivePoint::from_affine(GENERATOR.x(), GENERATOR.y())
@@ -518,7 +518,7 @@ rustler::init!(
         cairo_binding_sig_sign,
         cairo_binding_sig_verify,
         cairo_random_felt,
-        cairo_get_binding_sig_public_key,
+        get_public_key,
         poseidon_single,
         poseidon,
         poseidon_many,
