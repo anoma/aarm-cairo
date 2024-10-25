@@ -64,6 +64,13 @@ defmodule Cairo.CairoProver do
       ),
       do: error()
 
+  @spec encrypt(list(list(byte())), list(byte()), list(byte()), list(byte())) ::
+          nif_result(list(byte()))
+  def encrypt(_messages, _pk, _sk, _nonce), do: error()
+
+  @spec decrypt(list(list(byte())), list(byte())) :: nif_result(list(byte()))
+  def decrypt(_cihper, _sk), do: error()
+
   defp error, do: :erlang.nif_error(:nif_not_loaded)
 end
 

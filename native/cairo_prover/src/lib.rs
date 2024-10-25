@@ -7,11 +7,12 @@ mod utils;
 
 use crate::{
     compliance_input::ComplianceInputJson,
+    encryption::Ciphertext,
     errors::{
         CairoBindingSigError, CairoBindingSigVerifyError, CairoGetOutputError, CairoProveError,
-        CairoSignError, CairoVerifyError,
+        CairoSignError, CairoVerifyError, TypeError,
     },
-    utils::{felt_to_string, random_felt},
+    utils::{bytes_to_felt_vec, felt_to_string, random_felt},
 };
 use cairo_platinum_prover::{
     air::{generate_cairo_proof, verify_cairo_proof, PublicInputs, Segment, SegmentName},
@@ -487,6 +488,72 @@ fn cairo_generate_compliance_input_json(
     )
 }
 
+#[rustler::nif]
+fn encrypt(
+    messages: Vec<Vec<u8>>,
+    pk: Vec<u8>,
+    sk: Vec<u8>,
+    nonce: Vec<u8>,
+) -> NifResult<Vec<Vec<u8>>> {
+    // Decode messages
+    let msgs_felt = bytes_to_felt_vec(messages)?;
+
+    // Decode pk
+    let pk_affine = {
+        let key_x = Felt::from_bytes_be(&pk[0..32].try_into().map_err(|_| {
+            Error::Term(Box::new(TypeError::DecodingError("invalid pk".to_string())))
+        })?);
+        let key_y = Felt::from_bytes_be(&pk[32..64].try_into().map_err(|_| {
+            Error::Term(Box::new(TypeError::DecodingError("invalid pk".to_string())))
+        })?);
+        AffinePoint::new(key_x, key_y).map_err(|_| {
+            Error::Term(Box::new(TypeError::DecodingError("invalid pk".to_string())))
+        })?
+    };
+
+    // Decode sk
+    let sk_felt =
+        Felt::from_bytes_be(&sk.try_into().map_err(|_| {
+            Error::Term(Box::new(TypeError::DecodingError("invalid sk".to_string())))
+        })?);
+
+    // Decode nonce
+    let nonce_felt = Felt::from_bytes_be(&nonce.try_into().map_err(|_| {
+        Error::Term(Box::new(TypeError::DecodingError(
+            "invalid nonce".to_string(),
+        )))
+    })?);
+
+    // Encrypt
+    let cipher = Ciphertext::encrypt(&msgs_felt, &pk_affine, &sk_felt, &nonce_felt);
+    let cipher_bytes = cipher
+        .inner()
+        .iter()
+        .map(|x| x.to_bytes_be().to_vec())
+        .collect();
+
+    Ok(cipher_bytes)
+}
+
+#[rustler::nif]
+fn decrypt(cihper: Vec<Vec<u8>>, sk: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
+    // Decode messages
+    let cipher_felt = bytes_to_felt_vec(cihper)?;
+
+    // Decode sk
+    let sk_felt = Felt::from_bytes_be(&sk.try_into().map_err(|_| {
+        Error::Term(Box::new(TypeError::DecodingError(
+            "invalid nonce".to_string(),
+        )))
+    })?);
+
+    // Encrypt
+    let plaintext = Ciphertext::from(cipher_felt).decrypt(&sk_felt).unwrap();
+    let plaintext_bytes = plaintext.iter().map(|x| x.to_bytes_be().to_vec()).collect();
+
+    Ok(plaintext_bytes)
+}
+
 rustler::init!(
     "Elixir.Cairo.CairoProver",
     [
@@ -503,6 +570,8 @@ rustler::init!(
         program_hash,
         cairo_felt_to_string,
         cairo_generate_compliance_input_json,
+        encrypt,
+        decrypt,
     ]
 );
 
