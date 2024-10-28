@@ -1,14 +1,18 @@
+#![allow(dead_code)]
+
 mod compliance_input;
+mod encryption;
 mod errors;
 mod utils;
 
 use crate::{
     compliance_input::ComplianceInputJson,
+    encryption::Ciphertext,
     errors::{
         CairoBindingSigError, CairoBindingSigVerifyError, CairoGetOutputError, CairoProveError,
         CairoSignError, CairoVerifyError,
     },
-    utils::{felt_to_string, random_felt},
+    utils::{bytes_to_affine, bytes_to_felt, bytes_to_felt_vec, felt_to_string, random_felt},
 };
 use cairo_platinum_prover::{
     air::{generate_cairo_proof, verify_cairo_proof, PublicInputs, Segment, SegmentName},
@@ -356,7 +360,7 @@ fn cairo_random_felt() -> NifResult<Vec<u8>> {
 }
 
 #[rustler::nif]
-fn cairo_get_binding_sig_public_key(priv_key: Vec<u8>) -> NifResult<Vec<u8>> {
+fn get_public_key(priv_key: Vec<u8>) -> NifResult<Vec<u8>> {
     let priv_key_felt = Felt::from_bytes_be_slice(&priv_key);
 
     let generator = ProjectivePoint::from_affine(GENERATOR.x(), GENERATOR.y())
@@ -372,50 +376,26 @@ fn cairo_get_binding_sig_public_key(priv_key: Vec<u8>) -> NifResult<Vec<u8>> {
     Ok(ret)
 }
 fn message_digest(msg: Vec<Vec<u8>>) -> NifResult<Felt> {
-    let felt_msg_vec: Vec<Felt> = msg
-        .into_iter()
-        .map(|bytes| Felt::from_bytes_be(&bytes.try_into().expect("Slice with incorrect length")))
-        .collect();
+    let felt_msg_vec: Vec<Felt> = bytes_to_felt_vec(msg)?;
     Ok(poseidon_hash_many(&felt_msg_vec))
 }
 
 #[rustler::nif]
 fn poseidon_single(x: Vec<u8>) -> NifResult<Vec<u8>> {
-    let mut padded_x = x;
-    padded_x.resize(32, 0);
-    let x_bytes: [u8; 32] = padded_x
-        .as_slice()
-        .try_into()
-        .expect("Slice with incorrect length");
-    let x_field = Felt::from_bytes_be(&x_bytes);
+    let x_field = bytes_to_felt(x)?;
     Ok(poseidon_hash_single(x_field).to_bytes_be().to_vec())
 }
 
 #[rustler::nif]
 fn poseidon(x: Vec<u8>, y: Vec<u8>) -> NifResult<Vec<u8>> {
-    let x_bytes: [u8; 32] = x
-        .as_slice()
-        .try_into()
-        .expect("Slice with incorrect length");
-    let x_field = Felt::from_bytes_be(&x_bytes);
-    let y_bytes: [u8; 32] = y
-        .as_slice()
-        .try_into()
-        .expect("Slice with incorrect length");
-    let y_field = Felt::from_bytes_be(&y_bytes);
+    let x_field = bytes_to_felt(x)?;
+    let y_field = bytes_to_felt(y)?;
     Ok(poseidon_hash(x_field, y_field).to_bytes_be().to_vec())
 }
 
 #[rustler::nif]
 fn poseidon_many(inputs: Vec<Vec<u8>>) -> NifResult<Vec<u8>> {
-    let mut vec_fe = Vec::new();
-    for i in inputs {
-        let i_bytes: [u8; 32] = i
-            .as_slice()
-            .try_into()
-            .expect("Slice with incorrect length");
-        vec_fe.push(Felt::from_bytes_be(&i_bytes))
-    }
+    let vec_fe = bytes_to_felt_vec(inputs)?;
     let result_fe = poseidon_hash_many(&vec_fe);
     Ok(result_fe.to_bytes_be().to_vec())
 }
@@ -484,6 +464,51 @@ fn cairo_generate_compliance_input_json(
     )
 }
 
+#[rustler::nif]
+fn encrypt(
+    messages: Vec<Vec<u8>>,
+    pk: Vec<u8>,
+    sk: Vec<u8>,
+    nonce: Vec<u8>,
+) -> NifResult<Vec<Vec<u8>>> {
+    // Decode messages
+    let msgs_felt = bytes_to_felt_vec(messages)?;
+
+    // Decode pk
+    let pk_affine = bytes_to_affine(pk)?;
+
+    // Decode sk
+    let sk_felt = bytes_to_felt(sk)?;
+
+    // Decode nonce
+    let nonce_felt = bytes_to_felt(nonce)?;
+
+    // Encrypt
+    let cipher = Ciphertext::encrypt(&msgs_felt, &pk_affine, &sk_felt, &nonce_felt);
+    let cipher_bytes = cipher
+        .inner()
+        .iter()
+        .map(|x| x.to_bytes_be().to_vec())
+        .collect();
+
+    Ok(cipher_bytes)
+}
+
+#[rustler::nif]
+fn decrypt(cihper: Vec<Vec<u8>>, sk: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
+    // Decode messages
+    let cipher_felt = bytes_to_felt_vec(cihper)?;
+
+    // Decode sk
+    let sk_felt = bytes_to_felt(sk)?;
+
+    // Encrypt
+    let plaintext = Ciphertext::from(cipher_felt).decrypt(&sk_felt).unwrap();
+    let plaintext_bytes = plaintext.iter().map(|x| x.to_bytes_be().to_vec()).collect();
+
+    Ok(plaintext_bytes)
+}
+
 rustler::init!(
     "Elixir.Cairo.CairoProver",
     [
@@ -493,13 +518,15 @@ rustler::init!(
         cairo_binding_sig_sign,
         cairo_binding_sig_verify,
         cairo_random_felt,
-        cairo_get_binding_sig_public_key,
+        get_public_key,
         poseidon_single,
         poseidon,
         poseidon_many,
         program_hash,
         cairo_felt_to_string,
         cairo_generate_compliance_input_json,
+        encrypt,
+        decrypt,
     ]
 );
 

@@ -62,7 +62,7 @@ defmodule Cairo do
           list(byte()) | {:error, term()}
   defdelegate get_public_key(priv_key),
     to: Cairo.CairoProver,
-    as: :cairo_get_binding_sig_public_key
+    as: :get_public_key
 
   @spec poseidon_single(list(byte())) ::
           list(byte()) | {:error, term()}
@@ -114,4 +114,16 @@ defmodule Cairo do
               ),
               to: Cairo.CairoProver,
               as: :cairo_generate_compliance_input_json
+
+  @spec encrypt(list(list(byte())), list(byte()), list(byte()), list(byte())) ::
+          list(byte()) | {:error, term()}
+  defdelegate encrypt(messages, pk, sk, nonce),
+    to: Cairo.CairoProver,
+    as: :encrypt
+
+  @spec decrypt(list(list(byte())), list(byte())) ::
+          list(byte()) | {:error, term()}
+  defdelegate decrypt(cihper, sk),
+    to: Cairo.CairoProver,
+    as: :decrypt
 end

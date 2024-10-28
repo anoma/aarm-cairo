@@ -1,4 +1,7 @@
+use crate::errors::TypeError;
 use rand::{thread_rng, RngCore};
+use rustler::{Error, NifResult};
+use starknet_types_core::curve::AffinePoint;
 use starknet_types_core::felt::Felt;
 
 pub fn felt_to_string(felt: &Vec<u8>) -> String {
@@ -17,4 +20,47 @@ pub fn random_felt() -> Vec<u8> {
     rng.fill_bytes(&mut felt);
     let felt = Felt::from_bytes_be_slice(&felt);
     felt.to_bytes_be().to_vec()
+}
+
+pub fn bytes_to_felt_vec(bytes: Vec<Vec<u8>>) -> NifResult<Vec<Felt>> {
+    let mut vec_fe = Vec::new();
+    for i in bytes {
+        let i_bytes: [u8; 32] = i.as_slice().try_into().map_err(|_| {
+            Error::Term(Box::new(TypeError::DecodingError(
+                "invalid felt".to_string(),
+            )))
+        })?;
+        vec_fe.push(Felt::from_bytes_be(&i_bytes))
+    }
+
+    Ok(vec_fe)
+}
+
+pub fn bytes_to_felt(bytes: Vec<u8>) -> NifResult<Felt> {
+    let felt: [u8; 32] = bytes.try_into().map_err(|_| {
+        Error::Term(Box::new(TypeError::DecodingError(
+            "invalid felt".to_string(),
+        )))
+    })?;
+
+    Ok(Felt::from_bytes_be(&felt))
+}
+
+pub fn bytes_to_affine(bytes: Vec<u8>) -> NifResult<AffinePoint> {
+    if bytes.len() != 64 {
+        return Err(Error::Term(Box::new(TypeError::DecodingError(
+            "invalid pk".to_string(),
+        ))));
+    }
+    let key_x =
+        Felt::from_bytes_be(&bytes[0..32].try_into().map_err(|_| {
+            Error::Term(Box::new(TypeError::DecodingError("invalid pk".to_string())))
+        })?);
+    let key_y =
+        Felt::from_bytes_be(&bytes[32..64].try_into().map_err(|_| {
+            Error::Term(Box::new(TypeError::DecodingError("invalid pk".to_string())))
+        })?);
+
+    AffinePoint::new(key_x, key_y)
+        .map_err(|_| Error::Term(Box::new(TypeError::DecodingError("invalid pk".to_string()))))
 }

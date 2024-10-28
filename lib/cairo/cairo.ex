@@ -35,9 +35,9 @@ defmodule Cairo.CairoProver do
   @spec cairo_random_felt() :: nif_result(list(byte()))
   def cairo_random_felt(), do: error()
 
-  @spec cairo_get_binding_sig_public_key(list(byte())) ::
+  @spec get_public_key(list(byte())) ::
           nif_result(list(byte()))
-  def cairo_get_binding_sig_public_key(_priv_key), do: error()
+  def get_public_key(_priv_key), do: error()
 
   @spec poseidon_single(list(byte())) :: nif_result(list(byte()))
   def poseidon_single(_input), do: error()
@@ -63,6 +63,13 @@ defmodule Cairo.CairoProver do
         _rcv
       ),
       do: error()
+
+  @spec encrypt(list(list(byte())), list(byte()), list(byte()), list(byte())) ::
+          nif_result(list(byte()))
+  def encrypt(_messages, _pk, _sk, _nonce), do: error()
+
+  @spec decrypt(list(list(byte())), list(byte())) :: nif_result(list(byte()))
+  def decrypt(_cihper, _sk), do: error()
 
   defp error, do: :erlang.nif_error(:nif_not_loaded)
 end

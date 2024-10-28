@@ -143,3 +143,22 @@ impl Encoder for CairoBindingSigError {
         self.to_string().encode(env)
     }
 }
+
+#[derive(Debug)]
+pub enum TypeError {
+    DecodingError(String),
+}
+
+impl std::fmt::Display for TypeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            TypeError::DecodingError(msg) => write!(f, "Type error: {}", msg),
+        }
+    }
+}
+
+impl Encoder for TypeError {
+    fn encode<'a>(&self, env: Env<'a>) -> Term<'a> {
+        self.to_string().encode(env)
+    }
+}
