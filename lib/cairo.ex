@@ -28,6 +28,12 @@ defmodule Cairo do
     to: Cairo.CairoProver,
     as: :cairo_prove
 
+  @spec stwo_prove([byte()], [byte()], [byte()]) ::
+          {[byte()], [byte()]} | {:error, term()}
+  defdelegate stwo_prove(trace, memory, public_input),
+              to: Cairo.CairoStwoProver,
+              as: :cairo_stwo_prove
+
   @spec verify(list(byte()), list(byte())) ::
           boolean() | {:error, term()}
   defdelegate verify(proof, pub_input),

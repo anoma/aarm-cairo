@@ -3,6 +3,7 @@ defmodule NifTest do
 
   doctest Cairo.CairoProver
   doctest Cairo.CairoVM
+  doctest Cairo.CairoStwoProver
 
   test "cairo_api_test" do
     {:ok, program} = File.read("./native/cairo_vm/cairo.json")
@@ -18,6 +19,8 @@ defmodule NifTest do
 
     # Prove and verify
     {proof, public_input} = Cairo.prove(trace, memory, vm_public_input)
+    {_proof, _public_input} = Cairo.stwo_prove(trace, memory, vm_public_input)
+
     assert true = Cairo.verify(proof, public_input)
 
     # Get program hash

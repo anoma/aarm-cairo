@@ -85,3 +85,18 @@ defmodule Cairo.CairoVM do
   def cairo_vm_runner(_program_content, _program_inputs),
     do: :erlang.nif_error(:nif_not_loaded)
 end
+
+defmodule Cairo.CairoStwoProver do
+  use Rustler,
+      otp_app: :cairo,
+      crate: :cairo_stwo_prover
+
+  @typedoc "Result type for NIF functions that can return errors"
+  @type nif_result(t) :: t | {:error, term()}
+
+  @spec cairo_stwo_prove(list(byte()), list(byte()), list(byte())) ::
+          nif_result({list(byte()), list(byte())})
+  def cairo_stwo_prove(_trace, _memory, _public_input), do: error()
+
+  defp error, do: :erlang.nif_error(:nif_not_loaded)
+end
