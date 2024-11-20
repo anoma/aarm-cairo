@@ -254,6 +254,7 @@ dependencies = [
  "starknet-crypto 0.7.1",
  "starknet-curve 0.5.0",
  "starknet-types-core",
+ "thiserror",
 ]
 
 [[package]]

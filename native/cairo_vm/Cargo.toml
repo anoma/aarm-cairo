@@ -14,3 +14,4 @@ rustler = "0.31.0"
 bincode = "2.0.0-rc.3"
 juvix-cairo-vm = { git = "https://github.com/anoma/juvix-cairo-vm"}
 serde_json = "1.0.120"
+thiserror = "1.0"
