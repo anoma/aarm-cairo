@@ -314,7 +314,7 @@ fn cairo_random_felt() -> NifResult<Vec<u8>> {
 
 #[rustler::nif]
 fn get_public_key(priv_key: Vec<u8>) -> NifResult<Vec<u8>> {
-    let priv_key_felt = Felt::from_bytes_be_slice(&priv_key);
+    let priv_key_felt = bytes_to_felt(priv_key)?;
 
     let generator = ProjectivePoint::from_affine(GENERATOR.x(), GENERATOR.y())
         .map_err(|_| CairoError::InvalidAffinePoint)?;

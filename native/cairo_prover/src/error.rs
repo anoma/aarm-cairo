@@ -24,7 +24,7 @@ pub enum CairoError {
     AddressNotFound(u64),
     #[error(transparent)]
     SignError(#[from] SignError),
-    #[error("Bytes should be a multiple of 32")]
+    #[error("Invalid inputs")]
     InvalidInputs,
     #[error("Invalid finite field: 32 bytes needed")]
     InvalidFiniteField,

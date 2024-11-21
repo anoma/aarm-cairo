@@ -18,14 +18,11 @@ pub fn random_felt() -> Vec<u8> {
     felt.to_bytes_be().to_vec()
 }
 
-pub fn bytes_to_felt_vec(bytes: Vec<Vec<u8>>) -> Result<Vec<Felt>, CairoError> {
+pub fn bytes_to_felt_vec(bytes_vec: Vec<Vec<u8>>) -> Result<Vec<Felt>, CairoError> {
     let mut vec_fe = Vec::new();
-    for i in bytes {
-        let i_bytes: [u8; 32] = i
-            .as_slice()
-            .try_into()
-            .map_err(|_| CairoError::InvalidFiniteField)?;
-        vec_fe.push(Felt::from_bytes_be(&i_bytes))
+    for fe_bytes in bytes_vec {
+        let fe = bytes_to_felt(fe_bytes)?;
+        vec_fe.push(fe)
     }
 
     Ok(vec_fe)
