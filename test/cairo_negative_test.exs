@@ -41,4 +41,47 @@ defmodule NegativeTest do
     assert {:error, _} = Cairo.get_output([])
     assert {:error, _} = Cairo.get_output([1, 2, 3, 4])
   end
+
+  test "cairo_felt_to_string" do
+    assert "0x0" = Cairo.felt_to_string(List.duplicate(0, 32))
+
+    assert "0x7752582c54a42fe0fa35c40f07293bb7d8efe90e21d8d2c06a7db52d7d9b7a1" =
+             Cairo.felt_to_string([
+               7,
+               117,
+               37,
+               130,
+               197,
+               74,
+               66,
+               254,
+               15,
+               163,
+               92,
+               64,
+               240,
+               114,
+               147,
+               187,
+               125,
+               142,
+               254,
+               144,
+               226,
+               29,
+               141,
+               44,
+               6,
+               167,
+               219,
+               82,
+               215,
+               217,
+               183,
+               161
+             ])
+
+    assert {:error, "Invalid finite field: 32 bytes needed"} =
+             Cairo.felt_to_string([1, 2, 3, 4])
+  end
 end
