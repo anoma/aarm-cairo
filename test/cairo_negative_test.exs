@@ -36,4 +36,9 @@ defmodule NegativeTest do
 
     assert String.starts_with?(error_message, "Runtime error:")
   end
+
+  test "cairo_get_output" do
+    assert {:error, _} = Cairo.get_output([])
+    assert {:error, _} = Cairo.get_output([1, 2, 3, 4])
+  end
 end

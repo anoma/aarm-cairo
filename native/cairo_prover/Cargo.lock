@@ -189,7 +189,7 @@ dependencies = [
 [[package]]
 name = "cairo-platinum-prover"
 version = "0.9.0"
-source = "git+https://github.com/lambdaclass/lambdaworks#c4fa1f21b98a56825c76b2c38108e3a7f79b3995"
+source = "git+https://github.com/heliaxdev/lambdaworks?branch=cairo_rm#ea328f5ca24448c0e2d7816a76b86c81eadb2d9f"
 dependencies = [
  "bincode 2.0.0-rc.2",
  "cairo-vm",
@@ -486,7 +486,7 @@ dependencies = [
 [[package]]
 name = "lambdaworks-crypto"
 version = "0.9.0"
-source = "git+https://github.com/lambdaclass/lambdaworks#c4fa1f21b98a56825c76b2c38108e3a7f79b3995"
+source = "git+https://github.com/heliaxdev/lambdaworks?branch=cairo_rm#ea328f5ca24448c0e2d7816a76b86c81eadb2d9f"
 dependencies = [
  "lambdaworks-math 0.9.0",
  "serde",
@@ -507,7 +507,7 @@ dependencies = [
 [[package]]
 name = "lambdaworks-math"
 version = "0.9.0"
-source = "git+https://github.com/lambdaclass/lambdaworks#c4fa1f21b98a56825c76b2c38108e3a7f79b3995"
+source = "git+https://github.com/heliaxdev/lambdaworks?branch=cairo_rm#ea328f5ca24448c0e2d7816a76b86c81eadb2d9f"
 dependencies = [
  "rayon",
  "serde",
@@ -859,7 +859,7 @@ checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 [[package]]
 name = "stark-platinum-prover"
 version = "0.9.0"
-source = "git+https://github.com/lambdaclass/lambdaworks#c4fa1f21b98a56825c76b2c38108e3a7f79b3995"
+source = "git+https://github.com/heliaxdev/lambdaworks?branch=cairo_rm#ea328f5ca24448c0e2d7816a76b86c81eadb2d9f"
 dependencies = [
  "bincode 2.0.0-rc.2",
  "itertools 0.11.0",
