@@ -4,7 +4,7 @@ defmodule NifTest do
   doctest Cairo.CairoProver
   doctest Cairo.CairoVM
 
-  test "cairo_api_test" do
+  test "cairo_prove_test" do
     {:ok, program} = File.read("./native/cairo_vm/cairo.json")
     {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
 
@@ -25,5 +25,16 @@ defmodule NifTest do
       Cairo.get_program_hash(public_input) |> Cairo.felt_to_string()
 
     # IO.inspect(program_hash)
+
+    assert {:error, _} = Cairo.prove([], memory, vm_public_input)
+    assert {:error, _} = Cairo.prove(trace, [], vm_public_input)
+    assert {:error, _} = Cairo.prove(trace, memory, [])
+    assert {:error, _} = Cairo.prove([1], memory, vm_public_input)
+    assert {:error, _} = Cairo.prove(trace, [1], vm_public_input)
+    assert {:error, _} = Cairo.prove(trace, memory, [1])
+    assert {:error, _} = Cairo.verify([], public_input)
+    assert {:error, _} = Cairo.verify(proof, [])
+    assert {:error, _} = Cairo.verify([1], public_input)
+    assert {:error, _} = Cairo.verify(proof, [1])
   end
 end
