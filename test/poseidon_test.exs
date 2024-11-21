@@ -71,4 +71,20 @@ defmodule PoseidonTest do
 
     assert hash_bytes == output
   end
+
+  test "poseidon_hash_invalid_input" do
+    assert {:error, "Invalid finite field: 32 bytes needed"} =
+             Cairo.poseidon_single([])
+
+    assert {:error, "Invalid finite field: 32 bytes needed"} =
+             Cairo.poseidon([], List.duplicate(1, 32))
+
+    assert {:error, "Invalid finite field: 32 bytes needed"} =
+             Cairo.poseidon(List.duplicate(1, 32), [])
+
+    assert {:error, "Invalid inputs"} = Cairo.poseidon_many([])
+
+    assert {:error, "Invalid finite field: 32 bytes needed"} =
+             Cairo.poseidon_many([[1]])
+  end
 end

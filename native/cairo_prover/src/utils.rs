@@ -19,6 +19,9 @@ pub fn random_felt() -> Vec<u8> {
 }
 
 pub fn bytes_to_felt_vec(bytes_vec: Vec<Vec<u8>>) -> Result<Vec<Felt>, CairoError> {
+    if bytes_vec.is_empty() {
+        return Err(CairoError::InvalidInputs);
+    }
     let mut vec_fe = Vec::new();
     for fe_bytes in bytes_vec {
         let fe = bytes_to_felt(fe_bytes)?;
