@@ -1,10 +1,59 @@
-use crate::{error::CairoError, utils::bytes_to_felt_vec};
+use crate::{
+    error::CairoError,
+    utils::{bytes_to_affine, bytes_to_felt, bytes_to_felt_vec},
+};
+use rustler::NifResult;
 use starknet_crypto::{poseidon_hash, poseidon_hash_many};
 use starknet_curve::curve_params::GENERATOR;
 use starknet_types_core::{
     curve::{AffinePoint, ProjectivePoint},
     felt::Felt,
 };
+
+#[rustler::nif]
+fn encrypt(
+    messages: Vec<Vec<u8>>,
+    pk: Vec<u8>,
+    sk: Vec<u8>,
+    nonce: Vec<u8>,
+) -> NifResult<Vec<Vec<u8>>> {
+    // Decode messages
+    let msgs_felt = bytes_to_felt_vec(messages)?;
+
+    // Decode pk
+    let pk_affine = bytes_to_affine(pk)?;
+
+    // Decode sk
+    let sk_felt = bytes_to_felt(sk)?;
+
+    // Decode nonce
+    let nonce_felt = bytes_to_felt(nonce)?;
+
+    // Encrypt
+    let cipher = Ciphertext::encrypt(&msgs_felt, &pk_affine, &sk_felt, &nonce_felt)?;
+    let cipher_bytes = cipher
+        .inner()
+        .iter()
+        .map(|x| x.to_bytes_be().to_vec())
+        .collect();
+
+    Ok(cipher_bytes)
+}
+
+#[rustler::nif]
+fn decrypt(cihper: Vec<Vec<u8>>, sk: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
+    // Decode messages
+    let cipher = Ciphertext::from_bytes(cihper)?;
+
+    // Decode sk
+    let sk_felt = bytes_to_felt(sk)?;
+
+    // Encrypt
+    let plaintext = cipher.decrypt(&sk_felt)?;
+    let plaintext_bytes = plaintext.iter().map(|x| x.to_bytes_be().to_vec()).collect();
+
+    Ok(plaintext_bytes)
+}
 
 // The PLAINTEXT_NUM should be fixed to achieve the indistinguishability of resource logics
 // Make it 10
