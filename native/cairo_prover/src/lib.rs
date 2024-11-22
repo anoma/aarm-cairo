@@ -4,6 +4,7 @@ mod binding_signature;
 mod compliance_input;
 mod encryption;
 mod error;
+mod poseidon;
 mod prover;
 mod utils;
 mod verifier;
@@ -14,27 +15,6 @@ use crate::{
     utils::{bytes_to_affine, bytes_to_felt, bytes_to_felt_vec},
 };
 use rustler::NifResult;
-use starknet_crypto::{poseidon_hash, poseidon_hash_many, poseidon_hash_single};
-
-#[rustler::nif]
-fn poseidon_single(x: Vec<u8>) -> NifResult<Vec<u8>> {
-    let x_field = bytes_to_felt(x)?;
-    Ok(poseidon_hash_single(x_field).to_bytes_be().to_vec())
-}
-
-#[rustler::nif]
-fn poseidon(x: Vec<u8>, y: Vec<u8>) -> NifResult<Vec<u8>> {
-    let x_field = bytes_to_felt(x)?;
-    let y_field = bytes_to_felt(y)?;
-    Ok(poseidon_hash(x_field, y_field).to_bytes_be().to_vec())
-}
-
-#[rustler::nif]
-fn poseidon_many(inputs: Vec<Vec<u8>>) -> NifResult<Vec<u8>> {
-    let vec_fe = bytes_to_felt_vec(inputs)?;
-    let result_fe = poseidon_hash_many(&vec_fe);
-    Ok(result_fe.to_bytes_be().to_vec())
-}
 
 #[rustler::nif]
 fn cairo_generate_compliance_input_json(
@@ -112,9 +92,9 @@ rustler::init!(
         binding_signature::cairo_binding_sig_sign,
         binding_signature::cairo_binding_sig_verify,
         binding_signature::get_public_key,
-        poseidon_single,
-        poseidon,
-        poseidon_many,
+        poseidon::poseidon_single,
+        poseidon::poseidon,
+        poseidon::poseidon_many,
         utils::cairo_random_felt,
         utils::cairo_felt_to_string,
         cairo_generate_compliance_input_json,
@@ -159,7 +139,9 @@ fn test_prf_expand_personalization() {
 
 #[test]
 fn generate_compliance_input_test_params() {
+    use starknet_crypto::poseidon_hash;
     use starknet_types_core::felt::Felt;
+
     println!("Felf one hex: {:?}", Felt::ONE.to_hex_string());
     let input_nf_key = Felt::ONE;
     let input_npk = poseidon_hash(input_nf_key, Felt::ZERO);
