@@ -3,7 +3,9 @@
 mod compliance_input;
 mod encryption;
 mod error;
+mod prover;
 mod utils;
+mod verifier;
 
 use crate::{
     compliance_input::ComplianceInputJson,
@@ -11,218 +13,15 @@ use crate::{
     error::CairoError,
     utils::{bytes_to_affine, bytes_to_felt, bytes_to_felt_vec},
 };
-use cairo_platinum_prover::{
-    air::{generate_cairo_proof, verify_cairo_proof, PublicInputs, Segment, SegmentName},
-    cairo_mem::CairoMemory,
-    execution_trace::build_main_trace,
-    register_states::RegisterStates,
-    Felt252,
-};
-use hashbrown::HashMap;
-use lambdaworks_math::traits::ByteConversion;
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::Zero;
 use rand::{thread_rng, RngCore};
 use rustler::NifResult;
-use stark_platinum_prover::proof::options::{ProofOptions, SecurityLevel};
 use starknet_crypto::{poseidon_hash, poseidon_hash_many, poseidon_hash_single, sign, verify};
 use starknet_curve::curve_params::{EC_ORDER, GENERATOR};
 use starknet_types_core::{curve::ProjectivePoint, felt::Felt};
 use std::ops::Add;
-
-#[rustler::nif(schedule = "DirtyCpu")]
-fn cairo_prove(
-    trace: Vec<u8>,
-    memory: Vec<u8>,
-    public_input: Vec<u8>,
-) -> NifResult<(Vec<u8>, Vec<u8>)> {
-    if trace.is_empty() || memory.is_empty() || public_input.is_empty() {
-        return Err(CairoError::EmptyInputs.into());
-    }
-    // Generating the prover args
-    let register_states =
-        RegisterStates::from_bytes_le(&trace).map_err(|_| CairoError::CairoImportError)?;
-
-    let memory = CairoMemory::from_bytes_le(&memory).map_err(|_| CairoError::CairoImportError)?;
-
-    // Handle public inputs
-    let (rc_min, rc_max, public_memory, memory_segments) = parse_public_input(&public_input)
-        .map_err(|e| CairoError::ParsePublicInputError(e.to_string()))?;
-
-    let num_steps = register_states.steps();
-    let mut pub_inputs = PublicInputs {
-        pc_init: Felt252::from(register_states.rows[0].pc),
-        ap_init: Felt252::from(register_states.rows[0].ap),
-        fp_init: Felt252::from(register_states.rows[0].fp),
-        pc_final: Felt252::from(register_states.rows[num_steps - 1].pc),
-        ap_final: Felt252::from(register_states.rows[num_steps - 1].ap),
-        range_check_min: Some(rc_min),
-        range_check_max: Some(rc_max),
-        memory_segments,
-        public_memory,
-        num_steps,
-    };
-
-    // Build main trace
-    let main_trace = build_main_trace(&register_states, &memory, &mut pub_inputs);
-
-    // Generating proof
-    let proof_options = ProofOptions::new_secure(SecurityLevel::Conjecturable100Bits, 3);
-    let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options)
-        .map_err(|_| CairoError::ProvingError)?;
-
-    // Encode proof and pub_inputs
-    let proof_bytes = bincode::serde::encode_to_vec(proof, bincode::config::standard())
-        .map_err(CairoError::from)?;
-    let pub_input_bytes = bincode::serde::encode_to_vec(&pub_inputs, bincode::config::standard())
-        .map_err(CairoError::from)?;
-
-    Ok((proof_bytes, pub_input_bytes))
-}
-
-#[allow(clippy::type_complexity)]
-fn parse_public_input(
-    public_input: &[u8],
-) -> Result<
-    (
-        u16,
-        u16,
-        HashMap<Felt252, Felt252>,
-        HashMap<SegmentName, Segment>,
-    ),
-    &'static str,
-> {
-    let rc_min = u16::from_le_bytes(
-        public_input
-            .get(0..2)
-            .ok_or("Input must be at least 2 bytes long for rc_min")?
-            .try_into()
-            .map_err(|_| "Failed to convert rc_min bytes")?,
-    );
-
-    let rc_max = u16::from_le_bytes(
-        public_input
-            .get(2..4)
-            .ok_or("Input must be at least 4 bytes long for rc_max")?
-            .try_into()
-            .map_err(|_| "Failed to convert rc_max bytes")?,
-    );
-
-    let mem_len = u64::from_le_bytes(
-        public_input
-            .get(4..12)
-            .ok_or("Input must be at least 12 bytes long for mem_len")?
-            .try_into()
-            .map_err(|_| "Failed to convert mem_len bytes")?,
-    ) as usize;
-
-    let mut public_memory: HashMap<Felt252, Felt252> = HashMap::new();
-    for i in 0..mem_len {
-        let start_index = 12 + i * 40;
-        let addr = Felt252::from(u64::from_le_bytes(
-            public_input
-                .get(start_index..start_index + 8)
-                .ok_or("Input too short for public memory address")?
-                .try_into()
-                .map_err(|_| "Failed to convert public memory address bytes")?,
-        ));
-        let value = Felt252::from_bytes_le(
-            public_input
-                .get(start_index + 8..start_index + 40)
-                .ok_or("Input too short for public memory value")?,
-        )
-        .map_err(|_| "Failed to create Felt252 from bytes")?;
-        public_memory.insert(addr, value);
-    }
-
-    let memory_segments_len = *public_input
-        .get(12 + 40 * mem_len)
-        .ok_or("Input too short for memory segments length")?
-        as usize;
-    let mut memory_segments = HashMap::new();
-    for i in 0..memory_segments_len {
-        let start_index = 12 + 40 * mem_len + 1 + i * 17;
-        let segment_type = match public_input
-            .get(start_index)
-            .ok_or("Input too short for segment type")?
-        {
-            0u8 => SegmentName::RangeCheck,
-            1u8 => SegmentName::Output,
-            2u8 => SegmentName::Program,
-            3u8 => SegmentName::Execution,
-            4u8 => SegmentName::Ecdsa,
-            5u8 => SegmentName::Pedersen,
-            _ => continue, // skip unknown type
-        };
-
-        let segment_begin = u64::from_le_bytes(
-            public_input
-                .get(start_index + 1..start_index + 9)
-                .ok_or("Input too short for segment begin")?
-                .try_into()
-                .map_err(|_| "Failed to convert segment begin bytes")?,
-        );
-        let segment_stop = u64::from_le_bytes(
-            public_input
-                .get(start_index + 9..start_index + 17)
-                .ok_or("Input too short for segment stop")?
-                .try_into()
-                .map_err(|_| "Failed to convert segment stop bytes")?,
-        );
-        memory_segments.insert(segment_type, Segment::new(segment_begin, segment_stop));
-    }
-
-    Ok((rc_min, rc_max, public_memory, memory_segments))
-}
-
-#[rustler::nif(schedule = "DirtyCpu")]
-fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> NifResult<bool> {
-    let proof_options = ProofOptions::new_secure(SecurityLevel::Conjecturable100Bits, 3);
-
-    // Decode proof
-    let proof = bincode::serde::decode_from_slice(&proof, bincode::config::standard())
-        .map_err(CairoError::from)?
-        .0;
-
-    // Decode public inputs
-    let pub_inputs = bincode::serde::decode_from_slice(&public_input, bincode::config::standard())
-        .map_err(CairoError::from)?
-        .0;
-
-    Ok(verify_cairo_proof(&proof, &pub_inputs, &proof_options))
-}
-
-#[rustler::nif()]
-fn cairo_get_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
-    // Decode public inputs
-    let (pub_inputs, _): (PublicInputs, usize) =
-        bincode::serde::decode_from_slice(&public_input, bincode::config::standard())
-            .map_err(CairoError::from)?;
-
-    // Get output segments
-    let output_segments = pub_inputs
-        .memory_segments
-        .get(&SegmentName::Output)
-        .ok_or_else(|| CairoError::SegmentNotFound)?;
-
-    let begin_addr: u64 = output_segments.begin_addr as u64;
-    let stop_addr: u64 = output_segments.stop_ptr as u64;
-
-    let mut output_values = Vec::new();
-    for addr in begin_addr..stop_addr {
-        // Convert addr to FieldElement (assuming this is the correct way to create a FieldElement from an address)
-        let addr_field_element = Felt252::from(addr);
-
-        if let Some(value) = pub_inputs.public_memory.get(&addr_field_element) {
-            output_values.push(value.clone().to_bytes_be().to_vec());
-        } else {
-            return Err(CairoError::AddressNotFound(addr).into());
-        }
-    }
-
-    Ok(output_values)
-}
 
 // The private_key_segments are random values used in delta commitments.
 // The messages are nullifiers and resource commitments in the transaction.
@@ -347,37 +146,6 @@ fn poseidon_many(inputs: Vec<Vec<u8>>) -> NifResult<Vec<u8>> {
     Ok(result_fe.to_bytes_be().to_vec())
 }
 
-// Get the program from public inputs and return the program hash as the
-// resource label
-#[rustler::nif]
-fn program_hash(public_inputs: Vec<u8>) -> NifResult<Vec<u8>> {
-    let (pub_inputs, _): (PublicInputs, usize) =
-        bincode::serde::decode_from_slice(&public_inputs, bincode::config::standard())
-            .map_err(CairoError::from)?;
-    let program_segments = pub_inputs
-        .memory_segments
-        .get(&SegmentName::Program)
-        .ok_or_else(|| CairoError::SegmentNotFound)?;
-
-    let begin_addr: u64 = program_segments.begin_addr as u64;
-    let stop_addr: u64 = program_segments.stop_ptr as u64;
-
-    let mut program = Vec::new();
-    for addr in begin_addr..stop_addr {
-        // Convert addr to FieldElement (assuming this is the correct way to create a FieldElement from an address)
-        let addr_field_element = Felt252::from(addr);
-        let value = pub_inputs
-            .public_memory
-            .get(&addr_field_element)
-            .ok_or_else(|| CairoError::AddressNotFound(addr))?;
-        program.push(Felt::from_raw(value.to_raw().limbs));
-    }
-
-    let program_hash = poseidon_hash_many(&program);
-
-    Ok(program_hash.to_bytes_be().to_vec())
-}
-
 #[rustler::nif]
 fn cairo_generate_compliance_input_json(
     input_resource: Vec<u8>,
@@ -447,16 +215,16 @@ fn decrypt(cihper: Vec<Vec<u8>>, sk: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
 rustler::init!(
     "Elixir.Cairo.CairoProver",
     [
-        cairo_prove,
-        cairo_verify,
-        cairo_get_output,
+        prover::cairo_prove,
+        verifier::cairo_verify,
+        verifier::cairo_get_output,
+        verifier::program_hash,
         cairo_binding_sig_sign,
         cairo_binding_sig_verify,
         get_public_key,
         poseidon_single,
         poseidon,
         poseidon_many,
-        program_hash,
         utils::cairo_random_felt,
         utils::cairo_felt_to_string,
         cairo_generate_compliance_input_json,
