@@ -1,5 +1,27 @@
 use crate::{error::CairoError, utils::felt_to_string};
+use rustler::NifResult;
 use serde::{Deserialize, Serialize};
+
+#[rustler::nif]
+fn cairo_generate_compliance_input_json(
+    input_resource: Vec<u8>,
+    output_resource: Vec<u8>,
+    path: Vec<Vec<u8>>,
+    pos: u64,
+    input_nf_key: Vec<u8>,
+    eph_root: Vec<u8>,
+    rcv: Vec<u8>,
+) -> NifResult<String> {
+    Ok(ComplianceInputJson::to_json_string(
+        input_resource,
+        output_resource,
+        path,
+        pos,
+        input_nf_key,
+        eph_root,
+        rcv,
+    )?)
+}
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct ComplianceInputJson {
@@ -107,4 +129,16 @@ fn test_compliance_input_json() {
     .unwrap();
 
     println!("compliance_input_json: {}", json);
+}
+
+#[test]
+fn generate_compliance_input_test_params() {
+    use starknet_crypto::poseidon_hash;
+    use starknet_types_core::felt::Felt;
+
+    println!("Felf one hex: {:?}", Felt::ONE.to_hex_string());
+    let input_nf_key = Felt::ONE;
+    let input_npk = poseidon_hash(input_nf_key, Felt::ZERO);
+    println!("input_npk: {:?}", input_npk.to_bytes_be());
+    println!("input_npk: {:?}", input_npk.to_hex_string());
 }
