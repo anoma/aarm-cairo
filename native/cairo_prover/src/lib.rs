@@ -9,7 +9,7 @@ use crate::{
     compliance_input::ComplianceInputJson,
     encryption::Ciphertext,
     error::CairoError,
-    utils::{bytes_to_affine, bytes_to_felt, bytes_to_felt_vec, felt_to_string, random_felt},
+    utils::{bytes_to_affine, bytes_to_felt, bytes_to_felt_vec},
 };
 use cairo_platinum_prover::{
     air::{generate_cairo_proof, verify_cairo_proof, PublicInputs, Segment, SegmentName},
@@ -306,12 +306,6 @@ fn cairo_binding_sig_verify(
     verify(&pub_key_x, &msg, &r, &s).map_err(|_| CairoError::SigVerifyError.into())
 }
 
-// random_felt can help create private key in signature
-#[rustler::nif]
-fn cairo_random_felt() -> NifResult<Vec<u8>> {
-    Ok(random_felt())
-}
-
 #[rustler::nif]
 fn get_public_key(priv_key: Vec<u8>) -> NifResult<Vec<u8>> {
     let priv_key_felt = bytes_to_felt(priv_key)?;
@@ -382,11 +376,6 @@ fn program_hash(public_inputs: Vec<u8>) -> NifResult<Vec<u8>> {
     let program_hash = poseidon_hash_many(&program);
 
     Ok(program_hash.to_bytes_be().to_vec())
-}
-
-#[rustler::nif]
-fn cairo_felt_to_string(felt: Vec<u8>) -> NifResult<String> {
-    Ok(felt_to_string(felt)?)
 }
 
 #[rustler::nif]
@@ -463,13 +452,13 @@ rustler::init!(
         cairo_get_output,
         cairo_binding_sig_sign,
         cairo_binding_sig_verify,
-        cairo_random_felt,
         get_public_key,
         poseidon_single,
         poseidon,
         poseidon_many,
         program_hash,
-        cairo_felt_to_string,
+        utils::cairo_random_felt,
+        utils::cairo_felt_to_string,
         cairo_generate_compliance_input_json,
         encrypt,
         decrypt,
