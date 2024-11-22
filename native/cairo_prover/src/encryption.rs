@@ -1,4 +1,4 @@
-use crate::error::CairoError;
+use crate::{error::CairoError, utils::bytes_to_felt_vec};
 use starknet_crypto::{poseidon_hash, poseidon_hash_many};
 use starknet_curve::curve_params::GENERATOR;
 use starknet_types_core::{
@@ -74,20 +74,18 @@ impl Ciphertext {
         // Add encrypt_nonce
         cipher.push(*encrypt_nonce);
 
-        Ok(cipher.into())
+        let ret: [Felt; CIPHERTEXT_NUM] = cipher
+            .try_into()
+            .map_err(|_| CairoError::InvalidCiphertextLength)?;
+
+        Ok(Self(ret))
     }
 
     pub fn decrypt(&self, sk: &Felt) -> Result<Vec<Felt>, CairoError> {
-        let cipher_text = self.inner();
-        let cipher_len = cipher_text.len();
-        if cipher_len != CIPHERTEXT_NUM {
-            return Err(CairoError::InvalidCiphertextLength);
-        }
-
-        let mac = cipher_text[CIPHERTEXT_MAC];
-        let pk_x = cipher_text[CIPHERTEXT_PK_X];
-        let pk_y = cipher_text[CIPHERTEXT_PK_Y];
-        let encrypt_nonce = cipher_text[CIPHERTEXT_NONCE];
+        let mac = self.inner()[CIPHERTEXT_MAC];
+        let pk_x = self.inner()[CIPHERTEXT_PK_X];
+        let pk_y = self.inner()[CIPHERTEXT_PK_Y];
+        let encrypt_nonce = self.inner()[CIPHERTEXT_NONCE];
 
         if let Ok(pk) = AffinePoint::new(pk_x, pk_y) {
             // Generate the secret key
@@ -104,7 +102,7 @@ impl Ciphertext {
 
             // Decrypt
             let mut msg = vec![];
-            for cipher_element in &cipher_text[0..PLAINTEXT_NUM] {
+            for cipher_element in &self.inner()[0..PLAINTEXT_NUM] {
                 let msg_element = *cipher_element - poseidon_state;
                 msg.push(msg_element);
                 poseidon_state = poseidon_hash(*cipher_element, secret_key_x);
@@ -119,15 +117,13 @@ impl Ciphertext {
             Err(CairoError::InvalidPublicKey)
         }
     }
-}
 
-impl From<Vec<Felt>> for Ciphertext {
-    fn from(input_vec: Vec<Felt>) -> Self {
-        Ciphertext(
-            input_vec
-                .try_into()
-                .expect("public input with incorrect length"),
-        )
+    pub fn from_bytes(input_vec: Vec<Vec<u8>>) -> Result<Self, CairoError> {
+        let cipher_felt = bytes_to_felt_vec(input_vec)?;
+        let cipher: [Felt; CIPHERTEXT_NUM] = cipher_felt
+            .try_into()
+            .map_err(|_| CairoError::InvalidCiphertextLength)?;
+        Ok(Self(cipher))
     }
 }
 

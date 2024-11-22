@@ -443,13 +443,13 @@ fn encrypt(
 #[rustler::nif]
 fn decrypt(cihper: Vec<Vec<u8>>, sk: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
     // Decode messages
-    let cipher_felt = bytes_to_felt_vec(cihper)?;
+    let cipher = Ciphertext::from_bytes(cihper)?;
 
     // Decode sk
     let sk_felt = bytes_to_felt(sk)?;
 
     // Encrypt
-    let plaintext = Ciphertext::from(cipher_felt).decrypt(&sk_felt)?;
+    let plaintext = cipher.decrypt(&sk_felt)?;
     let plaintext_bytes = plaintext.iter().map(|x| x.to_bytes_be().to_vec()).collect();
 
     Ok(plaintext_bytes)
