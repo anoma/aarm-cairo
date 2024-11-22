@@ -32,10 +32,10 @@ An example can be found in "cairo_api_test"
 # Run cairo-vm
 test "cairo_api_test" do
   // The file cairo.json is the output of Juvix compiler
-  {:ok, program} = File.read("./native/cairo_vm/cairo.json")
+  {:ok, program} = File.read("./juvix/cairo.json")
 
   // The file cairo_input.json is what we use to input data into the program. If there's no input, it'll just be an empty string.
-  {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
+  {:ok, input} = File.read("./juvix/cairo_input.json")
 
   // Run cairo vm
   {output, trace, memory, public_inputs} =

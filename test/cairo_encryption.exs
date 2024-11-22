@@ -6,8 +6,8 @@ defmodule NifTest do
 
   test "cairo_encryption_test" do
     # encryption circuit test
-    {:ok, program} = File.read("./native/cairo_vm/encryption.json")
-    {:ok, input} = File.read("./native/cairo_vm/encryption_input.json")
+    {:ok, program} = File.read("./juvix/encryption.json")
+    {:ok, input} = File.read("./juvix/encryption_input.json")
 
     {_output, trace, memory, vm_public_input} =
       Cairo.cairo_vm_runner(
@@ -41,7 +41,8 @@ defmodule NifTest do
     assert plaintext == expected_plaintext
 
     # decryption: wrong sk
-    assert {:error, "Invalid DH key"} = Cairo.decrypt(expected_cipher, felt_bytes_0)
+    assert {:error, "Invalid DH key"} =
+             Cairo.decrypt(expected_cipher, felt_bytes_0)
   end
 
   test "cairo_encryption_invalid_input_test" do
