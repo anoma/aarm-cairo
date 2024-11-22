@@ -176,10 +176,6 @@ impl Plaintext {
         &self.0
     }
 
-    pub fn to_vec(&self) -> Vec<Felt> {
-        self.0.to_vec()
-    }
-
     pub fn padding(msg: &[Felt]) -> Self {
         let mut plaintext = msg.to_owned();
         let padding = std::iter::repeat(Felt::ZERO).take(PLAINTEXT_NUM - msg.len());
@@ -230,5 +226,5 @@ fn test_encryption() {
     let decryption = cipher.decrypt(&Felt::ONE).unwrap();
 
     let padded_plaintext = Plaintext::padding(&messages);
-    assert_eq!(padded_plaintext.to_vec(), decryption);
+    assert_eq!(padded_plaintext.inner().to_vec(), decryption);
 }

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 mod binding_signature;
 mod compliance_input;
 mod constants;
