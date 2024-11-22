@@ -1,4 +1,8 @@
 use crate::{
+    constants::{
+        CIPHERTEXT_MAC, CIPHERTEXT_NONCE, CIPHERTEXT_NUM, CIPHERTEXT_PK_X, CIPHERTEXT_PK_Y,
+        PLAINTEXT_NUM,
+    },
     error::CairoError,
     utils::{bytes_to_affine, bytes_to_felt, bytes_to_felt_vec},
 };
@@ -54,15 +58,6 @@ fn decrypt(cihper: Vec<Vec<u8>>, sk: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
 
     Ok(plaintext_bytes)
 }
-
-// The PLAINTEXT_NUM should be fixed to achieve the indistinguishability of resource logics
-// Make it 10
-pub const PLAINTEXT_NUM: usize = 10;
-pub const CIPHERTEXT_MAC: usize = PLAINTEXT_NUM;
-pub const CIPHERTEXT_PK_X: usize = PLAINTEXT_NUM + 1;
-pub const CIPHERTEXT_PK_Y: usize = PLAINTEXT_NUM + 2;
-pub const CIPHERTEXT_NONCE: usize = PLAINTEXT_NUM + 3;
-pub const CIPHERTEXT_NUM: usize = PLAINTEXT_NUM + 4;
 
 #[derive(Debug, Clone)]
 pub struct Ciphertext([Felt; CIPHERTEXT_NUM]);
