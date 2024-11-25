@@ -6,7 +6,7 @@ defmodule NegativeTest do
 
   test "cairo_vm_runner with invalid program content" do
     invalid_program = "This is not valid JSON"
-    {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
+    {:ok, input} = File.read("./juvix/cairo_input.json")
 
     assert {:error, error_message} =
              Cairo.cairo_vm_runner(invalid_program, input)
@@ -15,7 +15,7 @@ defmodule NegativeTest do
   end
 
   test "cairo_vm_runner with invalid input JSON" do
-    {:ok, program} = File.read("./native/cairo_vm/cairo.json")
+    {:ok, program} = File.read("./juvix/cairo.json")
     invalid_input = "This is not valid JSON"
 
     assert {:error, error_message} =

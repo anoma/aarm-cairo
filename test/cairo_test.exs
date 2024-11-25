@@ -5,8 +5,8 @@ defmodule NifTest do
   doctest Cairo.CairoVM
 
   test "cairo_prove_test" do
-    {:ok, program} = File.read("./native/cairo_vm/cairo.json")
-    {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
+    {:ok, program} = File.read("./juvix/cairo.json")
+    {:ok, input} = File.read("./juvix/cairo_input.json")
 
     {output, trace, memory, vm_public_input} =
       Cairo.cairo_vm_runner(

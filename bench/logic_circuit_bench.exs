@@ -1,7 +1,7 @@
-{:ok, program} = File.read("./native/cairo_vm/trivial_resource_logic.json")
+{:ok, program} = File.read("./juvix/trivial_resource_logic.json")
 
 {:ok, input} =
-  File.read("./native/cairo_vm/trivial_resource_logic_input.json")
+  File.read("./juvix/trivial_resource_logic_input.json")
 
 {_output, trace, memory, public_inputs} =
   Cairo.cairo_vm_runner(

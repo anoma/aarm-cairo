@@ -1,4 +1,12 @@
-use crate::{error::CairoError, utils::bytes_to_felt_vec};
+use crate::{
+    constants::{
+        CIPHERTEXT_MAC, CIPHERTEXT_NONCE, CIPHERTEXT_NUM, CIPHERTEXT_PK_X, CIPHERTEXT_PK_Y,
+        PLAINTEXT_NUM,
+    },
+    error::CairoError,
+    utils::{bytes_to_affine, bytes_to_felt, bytes_to_felt_vec},
+};
+use rustler::NifResult;
 use starknet_crypto::{poseidon_hash, poseidon_hash_many};
 use starknet_curve::curve_params::GENERATOR;
 use starknet_types_core::{
@@ -6,14 +14,50 @@ use starknet_types_core::{
     felt::Felt,
 };
 
-// The PLAINTEXT_NUM should be fixed to achieve the indistinguishability of resource logics
-// Make it 10
-pub const PLAINTEXT_NUM: usize = 10;
-pub const CIPHERTEXT_MAC: usize = PLAINTEXT_NUM;
-pub const CIPHERTEXT_PK_X: usize = PLAINTEXT_NUM + 1;
-pub const CIPHERTEXT_PK_Y: usize = PLAINTEXT_NUM + 2;
-pub const CIPHERTEXT_NONCE: usize = PLAINTEXT_NUM + 3;
-pub const CIPHERTEXT_NUM: usize = PLAINTEXT_NUM + 4;
+#[rustler::nif]
+fn encrypt(
+    messages: Vec<Vec<u8>>,
+    pk: Vec<u8>,
+    sk: Vec<u8>,
+    nonce: Vec<u8>,
+) -> NifResult<Vec<Vec<u8>>> {
+    // Decode messages
+    let msgs_felt = bytes_to_felt_vec(messages)?;
+
+    // Decode pk
+    let pk_affine = bytes_to_affine(pk)?;
+
+    // Decode sk
+    let sk_felt = bytes_to_felt(sk)?;
+
+    // Decode nonce
+    let nonce_felt = bytes_to_felt(nonce)?;
+
+    // Encrypt
+    let cipher = Ciphertext::encrypt(&msgs_felt, &pk_affine, &sk_felt, &nonce_felt)?;
+    let cipher_bytes = cipher
+        .inner()
+        .iter()
+        .map(|x| x.to_bytes_be().to_vec())
+        .collect();
+
+    Ok(cipher_bytes)
+}
+
+#[rustler::nif]
+fn decrypt(cihper: Vec<Vec<u8>>, sk: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
+    // Decode messages
+    let cipher = Ciphertext::from_bytes(cihper)?;
+
+    // Decode sk
+    let sk_felt = bytes_to_felt(sk)?;
+
+    // Encrypt
+    let plaintext = cipher.decrypt(&sk_felt)?;
+    let plaintext_bytes = plaintext.iter().map(|x| x.to_bytes_be().to_vec()).collect();
+
+    Ok(plaintext_bytes)
+}
 
 #[derive(Debug, Clone)]
 pub struct Ciphertext([Felt; CIPHERTEXT_NUM]);
@@ -132,10 +176,6 @@ impl Plaintext {
         &self.0
     }
 
-    pub fn to_vec(&self) -> Vec<Felt> {
-        self.0.to_vec()
-    }
-
     pub fn padding(msg: &[Felt]) -> Self {
         let mut plaintext = msg.to_owned();
         let padding = std::iter::repeat(Felt::ZERO).take(PLAINTEXT_NUM - msg.len());
@@ -186,5 +226,5 @@ fn test_encryption() {
     let decryption = cipher.decrypt(&Felt::ONE).unwrap();
 
     let padded_plaintext = Plaintext::padding(&messages);
-    assert_eq!(padded_plaintext.to_vec(), decryption);
+    assert_eq!(padded_plaintext.inner().to_vec(), decryption);
 }

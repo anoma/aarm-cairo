@@ -1,7 +1,19 @@
 use crate::error::CairoError;
 use rand::{thread_rng, RngCore};
+use rustler::NifResult;
 use starknet_types_core::curve::AffinePoint;
 use starknet_types_core::felt::Felt;
+
+#[rustler::nif]
+fn cairo_felt_to_string(felt: Vec<u8>) -> NifResult<String> {
+    Ok(felt_to_string(felt)?)
+}
+
+// random_felt can help create private key in signature
+#[rustler::nif]
+fn cairo_random_felt() -> NifResult<Vec<u8>> {
+    Ok(random_felt())
+}
 
 pub fn felt_to_string(bytes: Vec<u8>) -> Result<String, CairoError> {
     let felt: [u8; 32] = bytes

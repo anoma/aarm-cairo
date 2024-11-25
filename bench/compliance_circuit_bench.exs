@@ -1,5 +1,5 @@
-{:ok, program} = File.read("./native/cairo_vm/compliance.json")
-{:ok, input} = File.read("./native/cairo_vm/compliance_input.json")
+{:ok, program} = File.read("./juvix/compliance.json")
+{:ok, input} = File.read("./juvix/compliance_input.json")
 
 {_output, trace, memory, public_inputs} =
   Cairo.cairo_vm_runner(
