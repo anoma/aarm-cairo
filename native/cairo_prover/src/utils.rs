@@ -1,17 +1,13 @@
-use crate::errors::TypeError;
+use crate::error::CairoError;
 use rand::{thread_rng, RngCore};
-use rustler::{Error, NifResult};
 use starknet_types_core::curve::AffinePoint;
 use starknet_types_core::felt::Felt;
 
-pub fn felt_to_string(felt: &Vec<u8>) -> String {
-    assert_eq!(felt.len(), 32, "The felt size is not 32 bytes");
-    Felt::from_bytes_be(
-        felt.as_slice()
-            .try_into()
-            .expect("Slice with incorrect length"),
-    )
-    .to_hex_string()
+pub fn felt_to_string(bytes: Vec<u8>) -> Result<String, CairoError> {
+    let felt: [u8; 32] = bytes
+        .try_into()
+        .map_err(|_| CairoError::InvalidFiniteField)?;
+    Ok(Felt::from_bytes_be(&felt).to_hex_string())
 }
 
 pub fn random_felt() -> Vec<u8> {
@@ -22,45 +18,35 @@ pub fn random_felt() -> Vec<u8> {
     felt.to_bytes_be().to_vec()
 }
 
-pub fn bytes_to_felt_vec(bytes: Vec<Vec<u8>>) -> NifResult<Vec<Felt>> {
+pub fn bytes_to_felt_vec(bytes_vec: Vec<Vec<u8>>) -> Result<Vec<Felt>, CairoError> {
+    if bytes_vec.is_empty() {
+        return Err(CairoError::InvalidInputs);
+    }
     let mut vec_fe = Vec::new();
-    for i in bytes {
-        let i_bytes: [u8; 32] = i.as_slice().try_into().map_err(|_| {
-            Error::Term(Box::new(TypeError::DecodingError(
-                "invalid felt".to_string(),
-            )))
-        })?;
-        vec_fe.push(Felt::from_bytes_be(&i_bytes))
+    for fe_bytes in bytes_vec {
+        let fe = bytes_to_felt(fe_bytes)?;
+        vec_fe.push(fe)
     }
 
     Ok(vec_fe)
 }
 
-pub fn bytes_to_felt(bytes: Vec<u8>) -> NifResult<Felt> {
-    let felt: [u8; 32] = bytes.try_into().map_err(|_| {
-        Error::Term(Box::new(TypeError::DecodingError(
-            "invalid felt".to_string(),
-        )))
-    })?;
+pub fn bytes_to_felt(bytes: Vec<u8>) -> Result<Felt, CairoError> {
+    let felt: [u8; 32] = bytes
+        .try_into()
+        .map_err(|_| CairoError::InvalidFiniteField)?;
 
     Ok(Felt::from_bytes_be(&felt))
 }
 
-pub fn bytes_to_affine(bytes: Vec<u8>) -> NifResult<AffinePoint> {
+pub fn bytes_to_affine(bytes: Vec<u8>) -> Result<AffinePoint, CairoError> {
     if bytes.len() != 64 {
-        return Err(Error::Term(Box::new(TypeError::DecodingError(
-            "invalid pk".to_string(),
-        ))));
+        return Err(CairoError::InvalidAffinePoint);
     }
-    let key_x =
-        Felt::from_bytes_be(&bytes[0..32].try_into().map_err(|_| {
-            Error::Term(Box::new(TypeError::DecodingError("invalid pk".to_string())))
-        })?);
-    let key_y =
-        Felt::from_bytes_be(&bytes[32..64].try_into().map_err(|_| {
-            Error::Term(Box::new(TypeError::DecodingError("invalid pk".to_string())))
-        })?);
 
-    AffinePoint::new(key_x, key_y)
-        .map_err(|_| Error::Term(Box::new(TypeError::DecodingError("invalid pk".to_string()))))
+    let (x, y) = bytes.split_at(32);
+    let key_x = bytes_to_felt(x.to_vec())?;
+    let key_y = bytes_to_felt(y.to_vec())?;
+
+    AffinePoint::new(key_x, key_y).map_err(|_| CairoError::InvalidAffinePoint)
 }

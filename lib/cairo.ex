@@ -88,7 +88,7 @@ defmodule Cairo do
     to: Cairo.CairoProver,
     as: :program_hash
 
-  @spec felt_to_string(list(byte())) :: binary()
+  @spec felt_to_string(list(byte())) :: binary() | {:error, term()}
   defdelegate felt_to_string(felt),
     to: Cairo.CairoProver,
     as: :cairo_felt_to_string

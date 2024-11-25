@@ -1,3 +1,4 @@
+use crate::{error::CairoError, utils::bytes_to_felt_vec};
 use starknet_crypto::{poseidon_hash, poseidon_hash_many};
 use starknet_curve::curve_params::GENERATOR;
 use starknet_types_core::{
@@ -29,9 +30,15 @@ impl Ciphertext {
         &self.0
     }
 
-    pub fn encrypt(messages: &[Felt], pk: &AffinePoint, sk: &Felt, encrypt_nonce: &Felt) -> Self {
+    pub fn encrypt(
+        messages: &[Felt],
+        pk: &AffinePoint,
+        sk: &Felt,
+        encrypt_nonce: &Felt,
+    ) -> Result<Self, CairoError> {
         // Generate the secret key
-        let (secret_key_x, secret_key_y) = SecretKey::from_dh_exchange(pk, sk).get_coordinates();
+        let secret_key = SecretKey::from_dh_exchange(pk, sk)?;
+        let (secret_key_x, secret_key_y) = secret_key.get_coordinates();
 
         // Pad the messages
         let plaintext = Plaintext::padding(messages);
@@ -56,33 +63,34 @@ impl Ciphertext {
         cipher.push(poseidon_state);
 
         // Add sender's public key
-        let generator = ProjectivePoint::from_affine(GENERATOR.x(), GENERATOR.y()).unwrap();
-        let sender_pk = (&generator * *sk).to_affine().unwrap();
+        let generator = ProjectivePoint::from_affine(GENERATOR.x(), GENERATOR.y())
+            .map_err(|_| CairoError::InvalidAffinePoint)?;
+        let sender_pk = (&generator * *sk)
+            .to_affine()
+            .map_err(|_| CairoError::InvalidAffinePoint)?;
         cipher.push(sender_pk.x());
         cipher.push(sender_pk.y());
 
         // Add encrypt_nonce
         cipher.push(*encrypt_nonce);
 
-        cipher.into()
+        let ret: [Felt; CIPHERTEXT_NUM] = cipher
+            .try_into()
+            .map_err(|_| CairoError::InvalidCiphertextLength)?;
+
+        Ok(Self(ret))
     }
 
-    pub fn decrypt(&self, sk: &Felt) -> Option<Vec<Felt>> {
-        let cipher_text = self.inner();
-        let cipher_len = cipher_text.len();
-        if cipher_len != CIPHERTEXT_NUM {
-            return None;
-        }
-
-        let mac = cipher_text[CIPHERTEXT_MAC];
-        let pk_x = cipher_text[CIPHERTEXT_PK_X];
-        let pk_y = cipher_text[CIPHERTEXT_PK_Y];
-        let encrypt_nonce = cipher_text[CIPHERTEXT_NONCE];
+    pub fn decrypt(&self, sk: &Felt) -> Result<Vec<Felt>, CairoError> {
+        let mac = self.inner()[CIPHERTEXT_MAC];
+        let pk_x = self.inner()[CIPHERTEXT_PK_X];
+        let pk_y = self.inner()[CIPHERTEXT_PK_Y];
+        let encrypt_nonce = self.inner()[CIPHERTEXT_NONCE];
 
         if let Ok(pk) = AffinePoint::new(pk_x, pk_y) {
             // Generate the secret key
-            let (secret_key_x, secret_key_y) =
-                SecretKey::from_dh_exchange(&pk, sk).get_coordinates();
+            let sk = SecretKey::from_dh_exchange(&pk, sk)?;
+            let (secret_key_x, secret_key_y) = sk.get_coordinates();
 
             // Init poseidon sponge state
             let mut poseidon_state = poseidon_hash_many(&vec![
@@ -94,30 +102,28 @@ impl Ciphertext {
 
             // Decrypt
             let mut msg = vec![];
-            for cipher_element in &cipher_text[0..PLAINTEXT_NUM] {
+            for cipher_element in &self.inner()[0..PLAINTEXT_NUM] {
                 let msg_element = *cipher_element - poseidon_state;
                 msg.push(msg_element);
                 poseidon_state = poseidon_hash(*cipher_element, secret_key_x);
             }
 
             if mac != poseidon_state {
-                return None;
+                return Err(CairoError::DecryptionFailure);
             }
 
-            Some(msg)
+            Ok(msg)
         } else {
-            return None;
+            Err(CairoError::InvalidPublicKey)
         }
     }
-}
 
-impl From<Vec<Felt>> for Ciphertext {
-    fn from(input_vec: Vec<Felt>) -> Self {
-        Ciphertext(
-            input_vec
-                .try_into()
-                .expect("public input with incorrect length"),
-        )
+    pub fn from_bytes(input_vec: Vec<Vec<u8>>) -> Result<Self, CairoError> {
+        let cipher_felt = bytes_to_felt_vec(input_vec)?;
+        let cipher: [Felt; CIPHERTEXT_NUM] = cipher_felt
+            .try_into()
+            .map_err(|_| CairoError::InvalidCiphertextLength)?;
+        Ok(Self(cipher))
     }
 }
 
@@ -149,12 +155,13 @@ impl From<Vec<Felt>> for Plaintext {
 }
 
 impl SecretKey {
-    pub fn from_dh_exchange(pk: &AffinePoint, sk: &Felt) -> Self {
-        Self(
-            (&ProjectivePoint::try_from(pk.clone()).unwrap() * *sk)
-                .to_affine()
-                .unwrap(),
-        )
+    pub fn from_dh_exchange(pk: &AffinePoint, sk: &Felt) -> Result<Self, CairoError> {
+        let pk_projective =
+            ProjectivePoint::try_from(pk.clone()).map_err(|_| CairoError::InvalidAffinePoint)?;
+        let key = (&pk_projective * *sk)
+            .to_affine()
+            .map_err(|_| CairoError::InvalidDHKey)?;
+        Ok(Self(key))
     }
 
     pub fn get_coordinates(&self) -> (Felt, Felt) {
@@ -173,7 +180,7 @@ fn test_encryption() {
     let encrypt_nonce = Felt::ONE;
 
     // Encryption
-    let cipher = Ciphertext::encrypt(&messages, &pk, &sender_sk, &encrypt_nonce);
+    let cipher = Ciphertext::encrypt(&messages, &pk, &sender_sk, &encrypt_nonce).unwrap();
 
     // Decryption
     let decryption = cipher.decrypt(&Felt::ONE).unwrap();

@@ -51,6 +51,7 @@ defmodule Cairo.CairoProver do
   @spec program_hash(list(byte())) :: nif_result(list(byte()))
   def program_hash(_public_inputs), do: error()
 
+  @spec cairo_felt_to_string(list(byte())) :: nif_result(binary())
   def cairo_felt_to_string(_felt), do: error()
 
   def cairo_generate_compliance_input_json(

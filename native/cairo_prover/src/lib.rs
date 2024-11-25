@@ -2,16 +2,13 @@
 
 mod compliance_input;
 mod encryption;
-mod errors;
+mod error;
 mod utils;
 
 use crate::{
     compliance_input::ComplianceInputJson,
     encryption::Ciphertext,
-    errors::{
-        CairoBindingSigError, CairoBindingSigVerifyError, CairoGetOutputError, CairoProveError,
-        CairoSignError, CairoVerifyError,
-    },
+    error::CairoError,
     utils::{bytes_to_affine, bytes_to_felt, bytes_to_felt_vec, felt_to_string, random_felt},
 };
 use cairo_platinum_prover::{
@@ -27,14 +24,11 @@ use num_bigint::BigInt;
 use num_integer::Integer;
 use num_traits::Zero;
 use rand::{thread_rng, RngCore};
-use rustler::{Error, NifResult};
+use rustler::NifResult;
 use stark_platinum_prover::proof::options::{ProofOptions, SecurityLevel};
 use starknet_crypto::{poseidon_hash, poseidon_hash_many, poseidon_hash_single, sign, verify};
 use starknet_curve::curve_params::{EC_ORDER, GENERATOR};
-use starknet_types_core::{
-    curve::{AffinePoint, ProjectivePoint},
-    felt::Felt,
-};
+use starknet_types_core::{curve::ProjectivePoint, felt::Felt};
 use std::ops::Add;
 
 #[rustler::nif(schedule = "DirtyCpu")]
@@ -43,24 +37,18 @@ fn cairo_prove(
     memory: Vec<u8>,
     public_input: Vec<u8>,
 ) -> NifResult<(Vec<u8>, Vec<u8>)> {
+    if trace.is_empty() || memory.is_empty() || public_input.is_empty() {
+        return Err(CairoError::EmptyInputs.into());
+    }
     // Generating the prover args
-    let register_states = RegisterStates::from_bytes_le(&trace).map_err(|e| {
-        Error::Term(Box::new(CairoProveError::RegisterStatesError(format!(
-            "{:?}",
-            e
-        ))))
-    })?;
+    let register_states =
+        RegisterStates::from_bytes_le(&trace).map_err(|_| CairoError::CairoImportError)?;
 
-    let memory = CairoMemory::from_bytes_le(&memory).map_err(|e| {
-        Error::Term(Box::new(CairoProveError::CairoMemoryError(format!(
-            "{:?}",
-            e
-        ))))
-    })?;
+    let memory = CairoMemory::from_bytes_le(&memory).map_err(|_| CairoError::CairoImportError)?;
 
     // Handle public inputs
     let (rc_min, rc_max, public_memory, memory_segments) = parse_public_input(&public_input)
-        .map_err(|e| Error::Term(Box::new(CairoProveError::PublicInputError(e.to_string()))))?;
+        .map_err(|e| CairoError::ParsePublicInputError(e.to_string()))?;
 
     let num_steps = register_states.steps();
     let mut pub_inputs = PublicInputs {
@@ -81,24 +69,19 @@ fn cairo_prove(
 
     // Generating proof
     let proof_options = ProofOptions::new_secure(SecurityLevel::Conjecturable100Bits, 3);
-    let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options).map_err(|e| {
-        Error::Term(Box::new(CairoProveError::ProofGenerationError(format!(
-            "{:?}",
-            e
-        ))))
-    })?;
+    let proof = generate_cairo_proof(&main_trace, &pub_inputs, &proof_options)
+        .map_err(|_| CairoError::ProvingError)?;
 
     // Encode proof and pub_inputs
     let proof_bytes = bincode::serde::encode_to_vec(proof, bincode::config::standard())
-        .map_err(|e| Error::Term(Box::new(CairoProveError::EncodingError(format!("{:?}", e)))))?;
+        .map_err(CairoError::from)?;
     let pub_input_bytes = bincode::serde::encode_to_vec(&pub_inputs, bincode::config::standard())
-        .map_err(|e| {
-        Error::Term(Box::new(CairoProveError::EncodingError(format!("{:?}", e))))
-    })?;
+        .map_err(CairoError::from)?;
 
     Ok((proof_bytes, pub_input_bytes))
 }
 
+#[allow(clippy::type_complexity)]
 fn parse_public_input(
     public_input: &[u8],
 ) -> Result<
@@ -147,9 +130,7 @@ fn parse_public_input(
         let value = Felt252::from_bytes_le(
             public_input
                 .get(start_index + 8..start_index + 40)
-                .ok_or("Input too short for public memory value")?
-                .try_into()
-                .map_err(|_| "Failed to convert public memory value bytes")?,
+                .ok_or("Input too short for public memory value")?,
         )
         .map_err(|_| "Failed to create Felt252 from bytes")?;
         public_memory.insert(addr, value);
@@ -201,20 +182,12 @@ fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> NifResult<bool> {
 
     // Decode proof
     let proof = bincode::serde::decode_from_slice(&proof, bincode::config::standard())
-        .map_err(|e| {
-            Error::Term(Box::new(CairoVerifyError::ProofDecodingError(
-                e.to_string(),
-            )))
-        })?
+        .map_err(CairoError::from)?
         .0;
 
     // Decode public inputs
     let pub_inputs = bincode::serde::decode_from_slice(&public_input, bincode::config::standard())
-        .map_err(|e| {
-            Error::Term(Box::new(CairoVerifyError::PublicInputDecodingError(
-                e.to_string(),
-            )))
-        })?
+        .map_err(CairoError::from)?
         .0;
 
     Ok(verify_cairo_proof(&proof, &pub_inputs, &proof_options))
@@ -224,15 +197,14 @@ fn cairo_verify(proof: Vec<u8>, public_input: Vec<u8>) -> NifResult<bool> {
 fn cairo_get_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
     // Decode public inputs
     let (pub_inputs, _): (PublicInputs, usize) =
-        bincode::serde::decode_from_slice(&public_input, bincode::config::standard()).map_err(
-            |e| Error::Term(Box::new(CairoGetOutputError::DecodingError(e.to_string()))),
-        )?;
+        bincode::serde::decode_from_slice(&public_input, bincode::config::standard())
+            .map_err(CairoError::from)?;
 
     // Get output segments
     let output_segments = pub_inputs
         .memory_segments
         .get(&SegmentName::Output)
-        .ok_or_else(|| Error::Term(Box::new(CairoGetOutputError::SegmentNotFound)))?;
+        .ok_or_else(|| CairoError::SegmentNotFound)?;
 
     let begin_addr: u64 = output_segments.begin_addr as u64;
     let stop_addr: u64 = output_segments.stop_ptr as u64;
@@ -245,9 +217,7 @@ fn cairo_get_output(public_input: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
         if let Some(value) = pub_inputs.public_memory.get(&addr_field_element) {
             output_values.push(value.clone().to_bytes_be().to_vec());
         } else {
-            return Err(Error::Term(Box::new(CairoGetOutputError::AddressNotFound(
-                addr,
-            ))));
+            return Err(CairoError::AddressNotFound(addr).into());
         }
     }
 
@@ -261,12 +231,15 @@ fn cairo_binding_sig_sign(
     private_key_segments: Vec<u8>,
     messages: Vec<Vec<u8>>,
 ) -> NifResult<Vec<u8>> {
+    if private_key_segments.is_empty() || private_key_segments.len() % 32 != 0 {
+        return Err(CairoError::InvalidInputs.into());
+    }
     // Compute private key
     let private_key = {
         let result = private_key_segments
             .chunks(32)
             .fold(BigInt::zero(), |acc, key_segment| {
-                let key = BigInt::from_bytes_be(num_bigint::Sign::Plus, &key_segment);
+                let key = BigInt::from_bytes_be(num_bigint::Sign::Plus, key_segment);
                 acc.add(key)
             })
             .mod_floor(&EC_ORDER.to_bigint());
@@ -288,11 +261,7 @@ fn cairo_binding_sig_sign(
         rng.fill_bytes(&mut felt);
         Felt::from_bytes_be(&felt)
     };
-    let signature = sign(&private_key, &sig_hash, &k).map_err(|e| {
-        Error::Term(Box::new(CairoSignError::SignatureGenerationError(
-            e.to_string(),
-        )))
-    })?;
+    let signature = sign(&private_key, &sig_hash, &k).map_err(CairoError::from)?;
 
     // Serialize signature
     let mut ret = Vec::new();
@@ -311,46 +280,30 @@ fn cairo_binding_sig_verify(
     signature: Vec<u8>,
 ) -> NifResult<bool> {
     // Generate the public key
-    let pub_key = pub_key_segments
-        .into_iter()
-        .try_fold(ProjectivePoint::identity(), |acc, bytes| {
-            let key_x = Felt::from_bytes_be(
-                &bytes[0..32]
-                    .try_into()
-                    .map_err(|_| CairoBindingSigVerifyError::InputError)?,
-            );
-            let key_y = Felt::from_bytes_be(
-                &bytes[32..64]
-                    .try_into()
-                    .map_err(|_| CairoBindingSigVerifyError::InputError)?,
-            );
-            let key_segment_affine = AffinePoint::new(key_x, key_y)
-                .map_err(|_| CairoBindingSigVerifyError::InputError)?;
-            Ok(acc.add(key_segment_affine))
-        })
-        .map_err(|e: CairoBindingSigVerifyError| Error::Term(Box::new(e)))?
+    let mut pub_key = ProjectivePoint::identity();
+    for pk_seg_bytes in pub_key_segments.into_iter() {
+        let pk_seg = bytes_to_affine(pk_seg_bytes)?;
+        pub_key += pk_seg;
+    }
+    let pub_key_x = pub_key
         .to_affine()
-        .map_err(|_| Error::Term(Box::new(CairoBindingSigVerifyError::InputError)))?
+        .map_err(|_| CairoError::InvalidAffinePoint)?
         .x();
 
     // Message digest
     let msg = message_digest(messages)?;
 
     // Decode the signature
-    let r = Felt::from_bytes_be(
-        signature[0..32]
-            .try_into()
-            .map_err(|_| Error::Term(Box::new(CairoBindingSigVerifyError::InputError)))?,
-    );
-    let s = Felt::from_bytes_be(
-        signature[32..64]
-            .try_into()
-            .map_err(|_| Error::Term(Box::new(CairoBindingSigVerifyError::InputError)))?,
-    );
+    if signature.len() != 64 {
+        return Err(CairoError::InvalidSignatureFormat.into());
+    }
+
+    let (r_bytes, s_bytes) = signature.split_at(32);
+    let r = bytes_to_felt(r_bytes.to_vec())?;
+    let s = bytes_to_felt(s_bytes.to_vec())?;
 
     // Verify the signature
-    verify(&pub_key, &msg, &r, &s)
-        .map_err(|_| Error::Term(Box::new(CairoBindingSigVerifyError::VerificationError)))
+    verify(&pub_key_x, &msg, &r, &s).map_err(|_| CairoError::SigVerifyError.into())
 }
 
 // random_felt can help create private key in signature
@@ -361,14 +314,14 @@ fn cairo_random_felt() -> NifResult<Vec<u8>> {
 
 #[rustler::nif]
 fn get_public_key(priv_key: Vec<u8>) -> NifResult<Vec<u8>> {
-    let priv_key_felt = Felt::from_bytes_be_slice(&priv_key);
+    let priv_key_felt = bytes_to_felt(priv_key)?;
 
     let generator = ProjectivePoint::from_affine(GENERATOR.x(), GENERATOR.y())
-        .map_err(|_| Error::Term(Box::new(CairoBindingSigError::KeyGenerationError)))?;
+        .map_err(|_| CairoError::InvalidAffinePoint)?;
 
     let pub_key = (&generator * priv_key_felt)
         .to_affine()
-        .map_err(|_| Error::Term(Box::new(CairoBindingSigError::KeyGenerationError)))?;
+        .map_err(|_| CairoError::InvalidAffinePoint)?;
 
     let mut ret = pub_key.x().to_bytes_be().to_vec();
     let mut y = pub_key.y().to_bytes_be().to_vec();
@@ -405,14 +358,12 @@ fn poseidon_many(inputs: Vec<Vec<u8>>) -> NifResult<Vec<u8>> {
 #[rustler::nif]
 fn program_hash(public_inputs: Vec<u8>) -> NifResult<Vec<u8>> {
     let (pub_inputs, _): (PublicInputs, usize) =
-        bincode::serde::decode_from_slice(&public_inputs, bincode::config::standard()).unwrap();
-    let program_segments = match pub_inputs.memory_segments.get(&SegmentName::Program) {
-        Some(segment) => segment,
-        None => {
-            eprintln!("Error: 'Program' segment not found in memory_segments");
-            return Ok(vec![]);
-        }
-    };
+        bincode::serde::decode_from_slice(&public_inputs, bincode::config::standard())
+            .map_err(CairoError::from)?;
+    let program_segments = pub_inputs
+        .memory_segments
+        .get(&SegmentName::Program)
+        .ok_or_else(|| CairoError::SegmentNotFound)?;
 
     let begin_addr: u64 = program_segments.begin_addr as u64;
     let stop_addr: u64 = program_segments.stop_ptr as u64;
@@ -421,16 +372,11 @@ fn program_hash(public_inputs: Vec<u8>) -> NifResult<Vec<u8>> {
     for addr in begin_addr..stop_addr {
         // Convert addr to FieldElement (assuming this is the correct way to create a FieldElement from an address)
         let addr_field_element = Felt252::from(addr);
-
-        if let Some(value) = pub_inputs.public_memory.get(&addr_field_element) {
-            program.push(Felt::from_raw(value.to_raw().limbs));
-        } else {
-            eprintln!(
-                "Error: Address {:?} not found in public memory",
-                addr_field_element
-            );
-            return Ok(vec![]);
-        }
+        let value = pub_inputs
+            .public_memory
+            .get(&addr_field_element)
+            .ok_or_else(|| CairoError::AddressNotFound(addr))?;
+        program.push(Felt::from_raw(value.to_raw().limbs));
     }
 
     let program_hash = poseidon_hash_many(&program);
@@ -439,8 +385,8 @@ fn program_hash(public_inputs: Vec<u8>) -> NifResult<Vec<u8>> {
 }
 
 #[rustler::nif]
-fn cairo_felt_to_string(felt: Vec<u8>) -> String {
-    felt_to_string(&felt)
+fn cairo_felt_to_string(felt: Vec<u8>) -> NifResult<String> {
+    Ok(felt_to_string(felt)?)
 }
 
 #[rustler::nif]
@@ -452,16 +398,16 @@ fn cairo_generate_compliance_input_json(
     input_nf_key: Vec<u8>,
     eph_root: Vec<u8>,
     rcv: Vec<u8>,
-) -> String {
-    ComplianceInputJson::to_json_string(
-        &input_resource,
-        &output_resource,
-        &path,
+) -> NifResult<String> {
+    Ok(ComplianceInputJson::to_json_string(
+        input_resource,
+        output_resource,
+        path,
         pos,
-        &input_nf_key,
-        &eph_root,
-        &rcv,
-    )
+        input_nf_key,
+        eph_root,
+        rcv,
+    )?)
 }
 
 #[rustler::nif]
@@ -484,7 +430,7 @@ fn encrypt(
     let nonce_felt = bytes_to_felt(nonce)?;
 
     // Encrypt
-    let cipher = Ciphertext::encrypt(&msgs_felt, &pk_affine, &sk_felt, &nonce_felt);
+    let cipher = Ciphertext::encrypt(&msgs_felt, &pk_affine, &sk_felt, &nonce_felt)?;
     let cipher_bytes = cipher
         .inner()
         .iter()
@@ -497,13 +443,13 @@ fn encrypt(
 #[rustler::nif]
 fn decrypt(cihper: Vec<Vec<u8>>, sk: Vec<u8>) -> NifResult<Vec<Vec<u8>>> {
     // Decode messages
-    let cipher_felt = bytes_to_felt_vec(cihper)?;
+    let cipher = Ciphertext::from_bytes(cihper)?;
 
     // Decode sk
     let sk_felt = bytes_to_felt(sk)?;
 
     // Encrypt
-    let plaintext = Ciphertext::from(cipher_felt).decrypt(&sk_felt).unwrap();
+    let plaintext = cipher.decrypt(&sk_felt)?;
     let plaintext_bytes = plaintext.iter().map(|x| x.to_bytes_be().to_vec()).collect();
 
     Ok(plaintext_bytes)

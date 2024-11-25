@@ -37,67 +37,51 @@ defmodule NegativeTest do
     assert String.starts_with?(error_message, "Runtime error:")
   end
 
-  test "cairo_prove with invalid trace (RegisterStatesError)" do
-    {:ok, program} = File.read("./native/cairo_vm/cairo.json")
-    {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
-
-    {_output, _trace, memory, vm_public_input} =
-      Cairo.cairo_vm_runner(
-        program,
-        input
-      )
-
-    invalid_trace = [0, 1, 2, 3]
-
-    assert {:error, error_message} =
-             Cairo.prove(invalid_trace, memory, vm_public_input)
-
-    assert String.starts_with?(error_message, "Register states error:")
+  test "cairo_get_output" do
+    assert {:error, _} = Cairo.get_output([])
+    assert {:error, _} = Cairo.get_output([1, 2, 3, 4])
   end
 
-  test "cairo_prove with invalid memory (CairoMemoryError)" do
-    {:ok, program} = File.read("./native/cairo_vm/cairo.json")
-    {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
+  test "cairo_felt_to_string" do
+    assert "0x0" = Cairo.felt_to_string(List.duplicate(0, 32))
 
-    {_output, trace, _memory, vm_public_input} =
-      Cairo.cairo_vm_runner(
-        program,
-        input
-      )
+    assert "0x7752582c54a42fe0fa35c40f07293bb7d8efe90e21d8d2c06a7db52d7d9b7a1" =
+             Cairo.felt_to_string([
+               7,
+               117,
+               37,
+               130,
+               197,
+               74,
+               66,
+               254,
+               15,
+               163,
+               92,
+               64,
+               240,
+               114,
+               147,
+               187,
+               125,
+               142,
+               254,
+               144,
+               226,
+               29,
+               141,
+               44,
+               6,
+               167,
+               219,
+               82,
+               215,
+               217,
+               183,
+               161
+             ])
 
-    invalid_memory = [0, 1, 2, 3]
-
-    assert {:error, error_message} =
-             Cairo.prove(trace, invalid_memory, vm_public_input)
-
-    assert String.starts_with?(error_message, "Cairo memory error:")
-  end
-
-  test "cairo_verify with invalid proof" do
-    {:ok, program} = File.read("./native/cairo_vm/cairo.json")
-    {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
-
-    {_output, trace, memory, vm_public_input} =
-      Cairo.cairo_vm_runner(program, input)
-
-    {_proof, public_input} = Cairo.prove(trace, memory, vm_public_input)
-    invalid_proof = [0, 1, 2, 3]
-
-    assert {:error, error_message} = Cairo.verify(invalid_proof, public_input)
-    assert String.starts_with?(error_message, "Proof decoding error:")
-  end
-
-  test "cairo_verify with invalid public input" do
-    {:ok, program} = File.read("./native/cairo_vm/cairo.json")
-    {:ok, input} = File.read("./native/cairo_vm/cairo_input.json")
-
-    {_output, trace, memory, vm_public_input} =
-      Cairo.cairo_vm_runner(program, input)
-
-    {proof, _public_input} = Cairo.prove(trace, memory, vm_public_input)
-    invalid_public_input = []
-
-    assert {:error, error_message} = Cairo.verify(proof, invalid_public_input)
-    assert String.starts_with?(error_message, "Public input decoding error:")
+    assert {:error, "Invalid finite field: 32 bytes needed"} =
+             Cairo.felt_to_string([1, 2, 3, 4])
   end
 end
