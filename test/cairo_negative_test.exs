@@ -24,6 +24,19 @@ defmodule NegativeTest do
     assert error_message == "Invalid input JSON"
   end
 
+  test "cairo_vm_runner with missing entries" do
+    {:ok, program} = File.read("./juvix/cairo.json")
+
+    invalid_input = """
+    {
+    "y": 7
+    }
+    """
+
+    assert {:error, "Runtime error: The cairo program execution failed"} =
+             Cairo.cairo_vm_runner(program, invalid_input)
+  end
+
   test "cairo_vm_runner with runtime error in Cairo program" do
     program_with_error = ~S"""
     {"attributes":[],"builtins":["output","range_check","ec_op","poseidon"],"data":["0x4","0x48087ffd7fff8000","0x482a800080018000","0x48087ffb7fff8000","0x480880027fff8000","0x208b7fff7fff7ffe","0x4002800080007fff","0x4826800180008000","0x1","0x48107ffb7fff8000","0x48107ffb7fff8000","0x48107ffb7fff8000","0x10780017fff7fff","0x0"],"hints":{"8":[{"accessible_scopes":[],"code":"Input(y)","flow_tracking_data":{"ap_tracking":{"group":0,"offset":0},"reference_ids":{}}}],"9":[{"accessible_scopes":[],"code":"Input(x)","flow_tracking_data":{"ap_tracking":{"group":0,"offset":0},"reference_ids":{}}}]},"identifiers":{"__main__.__end__":{"pc":159,"type":"label"},"__main__.__start__":{"pc":0,"type":"label"},"__main__.main":{"decorators":[],"pc":0,"type":"function"}},"main_scope":"__main__","prime":"0x800000000000011000000000000000000000000000000000000000000000001","reference_manager":{"references":[]}}
