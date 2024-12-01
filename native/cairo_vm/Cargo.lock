@@ -595,7 +595,7 @@ dependencies = [
 [[package]]
 name = "juvix-cairo-vm"
 version = "0.9.0"
-source = "git+https://github.com/anoma/juvix-cairo-vm#56635ae19ab43d7fcb2f2fbef63a3d5c451f8be5"
+source = "git+https://github.com/anoma/juvix-cairo-vm#e0c926825607b658d429f1096ec70b959096ee3f"
 dependencies = [
  "ark-ff",
  "ark-std",
