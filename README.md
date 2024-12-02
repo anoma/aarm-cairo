@@ -17,3 +17,8 @@ mix run bench/compliance_circuit_bench.exs
 ```shell
 mix run bench/logic_circuit_bench.exs
 ```
+
+## Verifiable Encryption bench
+```shell
+mix run bench/verifiable_encryption_bench.exs
+```
