@@ -12,20 +12,22 @@ runs:
   steps:
       - name: Set up Elixir
         id: beam
-        uses: erlef/setup-beam@v1.16.0
+        uses: erlef/setup-beam@v1.18.2
         with:
-          elixir-version: '1.15.6'
-          otp-version: '26.1.2'
+          elixir-version: '1.17.3'
+          otp-version: '27.1'
 
       - name: Restore dependencies cache
         id: deps-cache
         uses: actions/cache@v3.3.2
         with:
-          path: deps
+          path: |
+            deps
+            _build
           key: |
             mix-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            mix-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+            mix-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
 
       - name: Fail on dependencies cache miss
         shell: bash
@@ -36,9 +38,13 @@ runs:
         shell: bash
         run: mix deps.get
 
-      - name: Build dependencies
+      - name: Build dependencies dev
         shell: bash
-        run: mix deps.compile
+        run: MIX_ENV=dev mix deps.compile
+
+      - name: Build dependencies test
+        shell: bash
+        run: MIX_ENV=test mix deps.compile
 
       - name: Restore PLT cache
         id: plt-cache
@@ -48,7 +54,7 @@ runs:
           key: |
             plt-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            plt-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+            plt-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
 
       - name: Fail on PLT cache miss
         shell: bash
