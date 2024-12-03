@@ -5,7 +5,7 @@ defmodule CairoComplianceTest do
   doctest Cairo.CairoVM
 
   test "compliance_circuit" do
-    {:ok, program} = File.read("./juvix/compliance.json")
+    {:ok, program} = File.read("./juvix/cairo_compliance.json")
     # {:ok, input} = File.read("./juvix/compliance_input.json")
     input_resource = List.duplicate(1, 225)
     output_resource = List.duplicate(2, 225)
