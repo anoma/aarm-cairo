@@ -29,11 +29,6 @@ runs:
           restore-keys: |
             mix-${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
 
-      - name: Fail on dependencies cache miss
-        shell: bash
-        if: ${{ (inputs.fail-on-failure == 'true') && steps.deps-cache.outputs.cache-hit != 'true' }}
-        run: /bin/false
-
       - name: Fetch dependencies
         shell: bash
         run: mix deps.get

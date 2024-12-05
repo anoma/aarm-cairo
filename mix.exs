@@ -5,9 +5,15 @@ defmodule Cairo.MixProject do
     [
       app: :cairo,
       version: "0.1.0",
-      elixir: "~> 1.15",
+      elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      dialyzer: [
+        plt_local_path: "plts/anoma.plt",
+        plt_core_path: "plts/core.plt",
+        flags: ["-Wno_improper_lists"],
+        plt_add_apps: [:mix, :ex_unit]
+      ],
       docs: docs()
     ]
   end

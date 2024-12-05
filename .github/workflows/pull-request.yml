@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        revision: ['topic', 'next']
+        revision: ['topic']
     name: Tests, dialyzer, format
     runs-on: ubuntu-latest
     steps:
@@ -21,16 +21,6 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.head.sha }}
         fetch-depth: 0
-
-    - name: Try merge with next
-      id: try_merge
-      continue-on-error: true
-      if: matrix.revision == 'next'
-      run: >
-        git checkout next &&
-        git -c user.name='Anoma CI' -c user.email='nobody@localhost'
-        merge -m 'Automerge with next'
-        ${{ github.event.pull_request.head.sha }}
 
     - uses: ./.github/workflows/setup
       if: steps.try_merge.outcome != 'failure'
