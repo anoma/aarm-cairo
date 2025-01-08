@@ -41,7 +41,7 @@ struct ResourceJson {
     data: String,
     eph: bool,
     nonce: String,
-    npk: String,
+    nk_commitment: String,
     rseed: String,
 }
 
@@ -99,7 +99,7 @@ impl ResourceJson {
             quantity: felt_to_string(bytes[64..96].to_vec())?,
             data: felt_to_string(bytes[96..128].to_vec())?,
             nonce: felt_to_string(bytes[128..160].to_vec())?,
-            npk: felt_to_string(bytes[160..192].to_vec())?,
+            nk_commitment: felt_to_string(bytes[160..192].to_vec())?,
             rseed: felt_to_string(bytes[192..224].to_vec())?,
             eph: bytes[224] != 0,
         })
@@ -138,7 +138,7 @@ fn generate_compliance_input_test_params() {
 
     println!("Felf one hex: {:?}", Felt::ONE.to_hex_string());
     let input_nf_key = Felt::ONE;
-    let input_npk = poseidon_hash(input_nf_key, Felt::ZERO);
-    println!("input_npk: {:?}", input_npk.to_bytes_be());
-    println!("input_npk: {:?}", input_npk.to_hex_string());
+    let input_nk_commitment = poseidon_hash(input_nf_key, Felt::ZERO);
+    println!("input_nk_commitment: {:?}", input_nk_commitment.to_bytes_be());
+    println!("input_nk_commitment: {:?}", input_nk_commitment.to_hex_string());
 }

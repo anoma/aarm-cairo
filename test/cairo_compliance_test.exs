@@ -6,24 +6,24 @@ defmodule CairoComplianceTest do
 
   test "compliance_circuit" do
     {:ok, program} = File.read("./juvix/cairo_compliance.json")
-    # {:ok, input} = File.read("./juvix/compliance_input.json")
-    input_resource = List.duplicate(1, 225)
-    output_resource = List.duplicate(2, 225)
-    path = List.duplicate(Cairo.random_felt(), 32)
-    input_nf_key = Cairo.random_felt()
-    eph_root = Cairo.random_felt()
-    rcv = Cairo.random_felt()
+    {:ok, input} = File.read("./juvix/cairo_compliance_input.json")
+    # input_resource = List.duplicate(1, 225)
+    # output_resource = List.duplicate(2, 225)
+    # path = List.duplicate(Cairo.random_felt(), 32)
+    # input_nf_key = Cairo.random_felt()
+    # eph_root = Cairo.random_felt()
+    # rcv = Cairo.random_felt()
 
-    input =
-      Cairo.generate_compliance_input_json(
-        input_resource,
-        output_resource,
-        path,
-        0,
-        input_nf_key,
-        eph_root,
-        rcv
-      )
+    # input =
+    #   Cairo.generate_compliance_input_json(
+    #     input_resource,
+    #     output_resource,
+    #     path,
+    #     0,
+    #     input_nf_key,
+    #     eph_root,
+    #     rcv
+    #   )
 
     {_output, trace, memory, public_inputs} =
       Cairo.cairo_vm_runner(
@@ -39,8 +39,9 @@ defmodule CairoComplianceTest do
 
     # Get program hash
     _program_hash =
-      Cairo.get_program_hash(public_input) |> Cairo.felt_to_string()
+      Cairo.get_program_hash(public_input)
 
     # IO.inspect(program_hash)
+    # IO.inspect(program_hash |> Cairo.felt_to_string())
   end
 end
