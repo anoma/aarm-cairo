@@ -27,4 +27,4 @@ fn cairo_vm_runner(
         .map_err(|e| CairoVMError::RuntimeError(e.to_string()).into())
 }
 
-rustler::init!("Elixir.Cairo.CairoVM", [cairo_vm_runner]);
+rustler::init!("Elixir.Cairo.CairoVM");
