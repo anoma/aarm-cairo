@@ -10,7 +10,7 @@ path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-rustler = "0.31.0"
+rustler = "0.35.1"
 bincode = "2.0.0-rc.3"
 juvix-cairo-vm = { git = "https://github.com/anoma/juvix-cairo-vm"}
 serde_json = "1.0.120"
